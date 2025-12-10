@@ -1,0 +1,427 @@
+@import 'tailwindcss';
+
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+@source '../../storage/framework/views/*.php';
+@source '../**/*.blade.php';
+@source '../**/*.js';
+
+@theme {
+    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
+        'Segoe UI Symbol', 'Noto Color Emoji';
+}
+
+/* Custom Components and Enhancements */
+@layer components {
+    /* Enhanced Button Styles */
+    .btn-primary {
+        @apply inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-all duration-200 font-medium shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2;
+    }
+    
+    .btn-secondary {
+        @apply inline-flex items-center px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-all duration-200 font-medium shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2;
+    }
+    
+    .btn-success {
+        @apply inline-flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-all duration-200 font-medium shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2;
+    }
+    
+    .btn-danger {
+        @apply inline-flex items-center px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-all duration-200 font-medium shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2;
+    }
+
+    /* New Button Variants */
+    .btn-outline {
+        @apply inline-flex items-center px-4 py-2 border border-gray-300 text-gray-700 bg-white rounded-lg transition-all duration-200 font-medium shadow-sm hover:shadow-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2;
+    }
+
+    .btn-white {
+        @apply inline-flex items-center px-4 py-2 bg-white text-gray-800 rounded-lg transition-all duration-200 font-medium shadow-sm hover:shadow-md border border-gray-200 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2;
+    }
+
+    /* Enhanced Card Styles */
+    .card {
+        @apply bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-shadow duration-200;
+    }
+    
+    .card-header {
+        @apply px-6 py-4 border-b border-gray-200;
+    }
+    
+    .card-body {
+        @apply p-6;
+    }
+
+    /* Enhanced Form Styles */
+    .form-input {
+        @apply form-control;
+    }
+    
+    .form-select {
+        @apply form-control;
+    }
+    
+    .form-label {
+        @apply block text-sm font-medium text-gray-700 mb-2;
+    }
+
+    /* Enhanced Table Styles */
+    .table {
+        @apply min-w-full divide-y divide-gray-200;
+    }
+    
+    .table-header {
+        @apply bg-gray-50;
+    }
+    
+    .table-header-cell {
+        @apply px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors duration-150;
+    }
+    
+    .table-row {
+        @apply hover:bg-gray-50 transition-colors duration-150;
+    }
+    
+    .table-cell {
+        @apply px-6 py-4 whitespace-nowrap text-sm text-gray-900;
+    }
+
+    /* DataTable sort icon */
+    .sort-icon {
+        @apply text-gray-400 ml-1 align-middle;
+        font-size: 16px;
+    }
+
+    /* Enhanced Badge Styles */
+    .badge {
+        @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+    }
+    
+    .badge-success {
+        @apply bg-green-100 text-green-800;
+    }
+    
+    .badge-warning {
+        @apply bg-yellow-100 text-yellow-800;
+    }
+    
+    .badge-danger {
+        @apply bg-red-100 text-red-800;
+    }
+    
+    .badge-info {
+        @apply bg-blue-100 text-blue-800;
+    }
+    
+    .badge-primary {
+        @apply bg-indigo-100 text-indigo-800;
+    }
+
+    /* Notification System */
+    .notification-container {
+        @apply fixed top-4 right-4 z-50 space-y-2 max-w-sm;
+    }
+    
+    .notification {
+        @apply bg-white border-l-4 shadow-lg rounded-r-lg p-4 transform transition-all duration-300 ease-in-out;
+        animation: slideInRight 0.3s ease-out;
+    }
+    
+    .notification.success {
+        @apply border-green-500 bg-green-50;
+    }
+    
+    .notification.error {
+        @apply border-red-500 bg-red-50;
+    }
+    
+    .notification.warning {
+        @apply border-yellow-500 bg-yellow-50;
+    }
+    
+    .notification.info {
+        @apply border-blue-500 bg-blue-50;
+    }
+    
+    .notification-header {
+        @apply flex items-center justify-between mb-2;
+    }
+    
+    .notification-title {
+        @apply text-sm font-medium;
+    }
+    
+    .notification.success .notification-title {
+        @apply text-green-800;
+    }
+    
+    .notification.error .notification-title {
+        @apply text-red-800;
+    }
+    
+    .notification.warning .notification-title {
+        @apply text-yellow-800;
+    }
+    
+    .notification.info .notification-title {
+        @apply text-blue-800;
+    }
+    
+    .notification-message {
+        @apply text-sm;
+    }
+    
+    .notification.success .notification-message {
+        @apply text-green-700;
+    }
+    
+    .notification.error .notification-message {
+        @apply text-red-700;
+    }
+    
+    .notification.warning .notification-message {
+        @apply text-yellow-700;
+    }
+    
+    .notification.info .notification-message {
+        @apply text-blue-700;
+    }
+    
+    .notification-close {
+        @apply text-gray-400 hover:text-gray-600 cursor-pointer;
+    }
+
+    /* Tooltip System */
+    .tooltip-container {
+        @apply relative inline-block;
+    }
+    
+    .tooltip {
+        @apply absolute z-10 px-2 py-1 text-xs text-white bg-gray-900 rounded shadow-lg opacity-0 pointer-events-none transition-opacity duration-200;
+        bottom: 125%;
+        left: 50%;
+        transform: translateX(-50%);
+    }
+    
+    .tooltip::after {
+        content: '';
+        @apply absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-900;
+    }
+    
+    .tooltip-container:hover .tooltip {
+        @apply opacity-100;
+    }
+
+    /* Loading States */
+    .loading {
+        @apply opacity-50 pointer-events-none;
+    }
+    
+    .loading-spinner {
+        @apply inline-block w-4 h-4 border-2 border-gray-300 border-t-blue-600 rounded-full animate-spin;
+    }
+    
+    .btn.loading {
+        @apply relative;
+    }
+    
+    .btn.loading .loading-spinner {
+        @apply absolute inset-0 m-auto;
+    }
+
+    /* Form Wizard */
+    .form-wizard {
+        @apply space-y-6;
+    }
+    
+    .wizard-step {
+        @apply hidden;
+    }
+    
+    .wizard-step.active {
+        @apply block;
+    }
+    
+    .wizard-navigation {
+        @apply flex justify-between items-center pt-4 border-t border-gray-200;
+    }
+    
+    .wizard-progress {
+        @apply flex items-center justify-center space-x-2 mb-6;
+    }
+    
+    .wizard-step-indicator {
+        @apply w-8 h-8 rounded-full border-2 flex items-center justify-center text-sm font-medium;
+    }
+    
+    .wizard-step-indicator.active {
+        @apply border-blue-600 bg-blue-600 text-white;
+    }
+    
+    .wizard-step-indicator.completed {
+        @apply border-green-600 bg-green-600 text-white;
+    }
+    
+    .wizard-step-indicator.pending {
+        @apply border-gray-300 bg-gray-100 text-gray-500;
+    }
+
+    /* Mobile Responsiveness */
+    @media (max-width: 768px) {
+        .mobile-hidden {
+            @apply hidden;
+        }
+        
+        .mobile-full {
+            @apply w-full;
+        }
+        
+        .mobile-stack {
+            @apply flex-col space-y-2;
+        }
+        
+        .table-responsive {
+            @apply overflow-x-auto;
+        }
+        
+        .card {
+            @apply mx-2;
+        }
+        
+        .modal-dialog {
+            @apply mx-4;
+        }
+    }
+
+    /* Confirmation Dialog */
+    .confirmation-overlay {
+        @apply fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4;
+    }
+    
+    .confirmation-dialog {
+        @apply bg-white rounded-lg shadow-xl max-w-md w-full p-6;
+    }
+    
+    .confirmation-title {
+        @apply text-lg font-medium text-gray-900 mb-2;
+    }
+    
+    .confirmation-message {
+        @apply text-sm text-gray-600 mb-6;
+    }
+    
+    .confirmation-actions {
+        @apply flex justify-end space-x-3;
+    }
+
+    /* Help System */
+    .help-icon {
+        @apply inline-block w-4 h-4 text-blue-500 cursor-help ml-1;
+    }
+    
+    .help-text {
+        @apply text-xs text-gray-500 mt-1;
+    }
+    
+    .field-help {
+        @apply text-xs text-gray-500 mt-1 italic;
+    }
+
+    /* Enhanced Glassmorphism */
+    .glassmorphism-card {
+        @apply bg-white/80 backdrop-blur-sm border border-white/20 shadow-xl rounded-2xl;
+    }
+    
+    .glassmorphism-input {
+        @apply bg-white/60 backdrop-blur-sm border border-white/30 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent;
+    }
+    
+    .glassmorphism-button {
+        @apply bg-white/80 backdrop-blur-sm border border-white/30 rounded-lg px-4 py-2 hover:bg-white/90 transition-all duration-200;
+    }
+}
+
+/* Animations */
+@keyframes slideInRight {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideOutRight {
+    from {
+        transform: translateX(0);
+        opacity: 1;
+    }
+    to {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Utility Classes */
+.text-shadow {
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.backdrop-blur {
+    backdrop-filter: blur(10px);
+}
+
+/* Enhanced Focus States */
+.focus-ring {
+    @apply focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2;
+}
+
+/* Smooth Transitions */
+.transition-all {
+    transition: all 0.2s ease-in-out;
+}
+
+/* Hover Effects */
+.hover-lift {
+    @apply hover:-translate-y-1 hover:shadow-lg transition-all duration-200;
+}
+
+.hover-scale {
+    @apply hover:scale-105 transition-transform duration-200;
+}
+
+/* Accessibility */
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+/* Print Styles */
+@media print {
+    .no-print {
+        display: none !important;
+    }
+    
+    .print-break {
+        page-break-before: always;
+    }
+}
