@@ -83,12 +83,6 @@ class HRUserController extends Controller
             ->where('created_at', '>=', now()->subDays(30))
             ->count();
         
-        // Get entities with chefs for swap functionality (eager load chef relation)
-        $entitesWithChefs = Entite::whereNotNull('chef_ppr')
-            ->with('chef')
-            ->orderBy('name')
-            ->get();
-        
         // If AJAX request, return JSON
         if ($request->ajax() || $request->has('ajax')) {
             $tableHtml = view('users.partials.table', compact('users'))->render();
@@ -103,7 +97,6 @@ class HRUserController extends Controller
             'users',
             'roles',
             'entites',
-            'entitesWithChefs',
             'totalUsers',
             'activeUsers',
             'newUsers30d'
@@ -428,6 +421,26 @@ class HRUserController extends Controller
     }
 
     /**
+     * Show the swap chefs form page.
+     */
+    public function showSwapChefs()
+    {
+        // Check if current user has permission
+        $currentUser = auth()->user();
+        if (!$currentUser->hasAnyRole(['admin', 'Collaborateur Rh', 'super Collaborateur Rh'])) {
+            abort(403, 'Accès non autorisé');
+        }
+
+        // Get entities with chefs for swap functionality (eager load chef relation)
+        $entitesWithChefs = Entite::whereNotNull('chef_ppr')
+            ->with('chef')
+            ->orderBy('name')
+            ->get();
+
+        return view('users.swap-chefs', compact('entitesWithChefs'));
+    }
+
+    /**
      * Swap chefs between two entities.
      */
     public function swapChefs(Request $request)
@@ -435,10 +448,13 @@ class HRUserController extends Controller
         // Check if current user has permission
         $currentUser = auth()->user();
         if (!$currentUser->hasAnyRole(['admin', 'Collaborateur Rh', 'super Collaborateur Rh'])) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Accès non autorisé'
-            ], 403);
+            if ($request->expectsJson() || $request->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Accès non autorisé'
+                ], 403);
+            }
+            abort(403, 'Accès non autorisé');
         }
 
         $validated = $request->validate([
@@ -452,10 +468,13 @@ class HRUserController extends Controller
 
         // Check both entities have chefs
         if (!$entity1->chef_ppr || !$entity2->chef_ppr) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Les deux entités doivent avoir un chef pour effectuer un échange.'
-            ], 400);
+            if ($request->expectsJson() || $request->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Les deux entités doivent avoir un chef pour effectuer un échange.'
+                ], 400);
+            }
+            return back()->withErrors(['error' => 'Les deux entités doivent avoir un chef pour effectuer un échange.'])->withInput();
         }
 
         $chef1Ppr = $entity1->chef_ppr;
@@ -537,16 +556,25 @@ class HRUserController extends Controller
                 $entity2->save();
             });
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Les chefs ont été échangés avec succès.'
-            ]);
+            if ($request->expectsJson() || $request->ajax()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Les chefs ont été échangés avec succès.'
+                ]);
+            }
+
+            return redirect()->route('hr.users.swap-chefs')
+                ->with('success', 'Les chefs ont été échangés avec succès.');
 
         } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Erreur lors de l\'échange: ' . $e->getMessage()
-            ], 500);
+            if ($request->expectsJson() || $request->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Erreur lors de l\'échange: ' . $e->getMessage()
+                ], 500);
+            }
+
+            return back()->withErrors(['error' => 'Erreur lors de l\'échange: ' . $e->getMessage()])->withInput();
         }
     }
 }

@@ -14,7 +14,7 @@
 
     <!-- Alerts Section -->
     @if($isChef && isset($pendingDemandesCount) && $pendingDemandesCount > 0)
-    <div class="alert alert-info border-info mb-4" role="alert" id="pendingDemandesAlert">
+    <div class="alert alert-info border-info alert-dismissible show mb-4" role="alert" id="pendingDemandesAlert" data-no-auto-hide="true" data-alert-key="pending-demandes-alert">
         <div class="d-flex align-items-center">
             <i class="fas fa-bell me-3 fs-4"></i>
             <div class="flex-grow-1">
@@ -59,16 +59,17 @@
 
     <!-- Pending Mutations Alert for Chefs -->
     @if($isChef && isset($pendingMutationsCount) && $pendingMutationsCount > 0)
-    <div class="alert alert-info border-info mb-4" role="alert">
+    <div class="alert alert-info border-info alert-dismissible show mb-4" role="alert" id="pendingMutationsAlert" data-no-auto-hide="true" data-alert-key="pending-mutations-alert">
         <div class="d-flex align-items-center">
             <i class="fas fa-exchange-alt me-3 fs-4"></i>
             <div class="flex-grow-1">
                 <h6 class="alert-heading mb-1">Demandes de mutation en attente</h6>
                 <p class="mb-0">Vous avez <strong>{{ $pendingMutationsCount }}</strong> demande(s) de mutation en attente de votre validation</p>
             </div>
-            <a href="{{ route('mutations.agent-requests', ['status' => 'pending']) }}" class="btn btn-info btn-sm">
+            <a href="{{ route('mutations.agent-requests', ['status' => 'pending']) }}" class="btn btn-info btn-sm me-2">
                 <i class="fas fa-tasks me-1"></i>Gérer les demandes
             </a>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
         @if(isset($pendingMutationsForChef) && $pendingMutationsForChef->count() > 0)
         <hr>
@@ -136,7 +137,7 @@
                 $nbrJours = $avisDepart ? ($avisDepart->nb_jours_demandes ?? 0) : 0;
             @endphp
             @if($status == 'approved')
-            <div class="alert alert-success border-success mb-4 position-relative alert-dismissible" id="alert-{{ $demande->id }}" role="alert">
+            <div class="alert alert-success border-success mb-4 position-relative alert-dismissible show" id="alert-{{ $demande->id }}" role="alert" data-no-auto-hide="true" style="padding-right: 3.5rem;">
                 <button type="button" onclick="dismissAlert({{ $demande->id }})" class="btn-close position-absolute top-0 end-0 m-3" aria-label="Close" style="z-index: 10; cursor: pointer;"></button>
                 <div class="d-flex align-items-center">
                     <i class="fas fa-check-circle me-3 fs-4"></i>
@@ -149,13 +150,13 @@
                             <div><i class="fas fa-clock me-1"></i><strong>Nombre de jours:</strong> {{ $nbrJours }} jour(s)</div>
                         </div>
                     </div>
-                    <a href="{{ route('leaves.tracking') }}" class="btn btn-success btn-sm">
+                    <a href="{{ route('leaves.tracking') }}" class="btn btn-success btn-sm ms-3">
                         <i class="fas fa-eye me-1"></i>Voir les détails
                     </a>
                 </div>
             </div>
             @elseif($status == 'rejected')
-            <div class="alert alert-danger border-danger mb-4 position-relative alert-dismissible" id="alert-{{ $demande->id }}" role="alert">
+            <div class="alert alert-danger border-danger mb-4 position-relative alert-dismissible show" id="alert-{{ $demande->id }}" role="alert" data-no-auto-hide="true" style="padding-right: 3.5rem;">
                 <button type="button" onclick="dismissAlert({{ $demande->id }})" class="btn-close position-absolute top-0 end-0 m-3" aria-label="Close" style="z-index: 10; cursor: pointer;"></button>
                 <div class="d-flex align-items-center">
                     <i class="fas fa-times-circle me-3 fs-4"></i>
@@ -173,12 +174,46 @@
                         </small>
                         @endif
                     </div>
-                    <a href="{{ route('leaves.tracking') }}" class="btn btn-danger btn-sm">
+                    <a href="{{ route('leaves.tracking') }}" class="btn btn-danger btn-sm ms-3">
                         <i class="fas fa-eye me-1"></i>Voir les détails
                     </a>
                 </div>
             </div>
             @endif
+        @endforeach
+    @endif
+
+    <!-- Avis de Retour Declaration Alerts (for Chefs) -->
+    @if($isChef && isset($recentAvisRetourDeclarations) && count($recentAvisRetourDeclarations) > 0)
+        @foreach($recentAvisRetourDeclarations as $avisRetourDeclaration)
+            @php
+                $demande = $avisRetourDeclaration['demande'];
+                $avisRetour = $avisRetourDeclaration['avis_retour'];
+                $isRecent = $avisRetourDeclaration['is_recent'];
+                $collaborateurName = $demande->user ? ($demande->user->fname . ' ' . $demande->user->lname) : 'N/A';
+                $dateRetourDeclaree = $avisRetour->date_retour_declaree ? \Carbon\Carbon::parse($avisRetour->date_retour_declaree)->format('d/m/Y') : 'N/A';
+                $nbrJoursConsumes = $avisRetour->nbr_jours_consumes ?? 0;
+                $avisDepart = $demande->avis ? $demande->avis->avisDepart : null;
+                $dateDepart = $avisDepart && $avisDepart->date_depart ? \Carbon\Carbon::parse($avisDepart->date_depart)->format('d/m/Y') : 'N/A';
+            @endphp
+            <div class="alert alert-info border-info mb-4 position-relative alert-dismissible show" id="avis-retour-alert-{{ $demande->id }}" role="alert" data-no-auto-hide="true" style="padding-right: 3.5rem;">
+                <button type="button" onclick="dismissAvisRetourAlert({{ $demande->id }})" class="btn-close position-absolute top-0 end-0 m-3" aria-label="Close" style="z-index: 10; cursor: pointer;"></button>
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-plane-arrival me-3 fs-4"></i>
+                    <div class="flex-grow-1">
+                        <h6 class="alert-heading mb-1">Avis de Retour Déclaré</h6>
+                        <p class="mb-2"><strong>{{ $collaborateurName }}</strong> a déclaré son avis de retour</p>
+                        <div class="small">
+                            <div><i class="fas fa-calendar me-1"></i><strong>Date de départ:</strong> {{ $dateDepart }}</div>
+                            <div><i class="fas fa-calendar-check me-1"></i><strong>Date de retour déclarée:</strong> {{ $dateRetourDeclaree }}</div>
+                            <div><i class="fas fa-clock me-1"></i><strong>Nombre de jours consommés:</strong> {{ $nbrJoursConsumes }} jour(s)</div>
+                        </div>
+                    </div>
+                    <a href="{{ route('hr.leaves.agents', ['statut' => 'pending']) }}" class="btn btn-info btn-sm ms-3">
+                        <i class="fas fa-eye me-1"></i>Voir les détails
+                    </a>
+                </div>
+            </div>
         @endforeach
     @endif
 
@@ -214,7 +249,7 @@
                 }
             @endphp
             @if($status == 'approved')
-            <div class="alert alert-success border-success mb-4 position-relative alert-dismissible fade show" id="mutation-alert-{{ $mutation->id }}" role="alert" data-no-auto-hide="true" style="box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);">
+            <div class="alert alert-success border-success mb-4 position-relative alert-dismissible show" id="mutation-alert-{{ $mutation->id }}" role="alert" data-no-auto-hide="true" style="box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075); padding-right: 3.5rem;">
                 <button type="button" onclick="dismissMutationAlert({{ $mutation->id }})" class="btn-close position-absolute top-0 end-0 m-3" aria-label="Fermer" style="z-index: 10; cursor: pointer;"></button>
                 <div class="d-flex align-items-center">
                     <i class="fas fa-check-circle me-3 fs-4"></i>
@@ -235,13 +270,13 @@
                             @endif
                         </div>
                     </div>
-                    <a href="{{ route('mutations.tracking') }}" class="btn btn-success btn-sm">
+                    <a href="{{ route('mutations.tracking') }}" class="btn btn-success btn-sm ms-3">
                         <i class="fas fa-eye me-1"></i>Voir les détails
                     </a>
                 </div>
             </div>
             @elseif($status == 'rejected')
-            <div class="alert alert-danger border-danger mb-4 position-relative alert-dismissible fade show" id="mutation-alert-{{ $mutation->id }}" role="alert" data-no-auto-hide="true" style="box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);">
+            <div class="alert alert-danger border-danger mb-4 position-relative alert-dismissible show" id="mutation-alert-{{ $mutation->id }}" role="alert" data-no-auto-hide="true" style="box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075); padding-right: 3.5rem;">
                 <button type="button" onclick="dismissMutationAlert({{ $mutation->id }})" class="btn-close position-absolute top-0 end-0 m-3" aria-label="Fermer" style="z-index: 10; cursor: pointer;"></button>
                 <div class="d-flex align-items-center">
                     <i class="fas fa-times-circle me-3 fs-4"></i>
@@ -257,7 +292,7 @@
                             @endif
                         </div>
                     </div>
-                    <a href="{{ route('mutations.tracking') }}" class="btn btn-danger btn-sm">
+                    <a href="{{ route('mutations.tracking') }}" class="btn btn-danger btn-sm ms-3">
                         <i class="fas fa-eye me-1"></i>Voir les détails
                     </a>
                 </div>
@@ -292,7 +327,7 @@
                     $isFinalValidation = true;
                 }
             @endphp
-            <div class="alert alert-warning border-warning mb-4 position-relative alert-dismissible fade show" id="super-rh-mutation-alert-{{ $mutation->id }}" role="alert" data-no-auto-hide="true" style="box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);">
+            <div class="alert alert-warning border-warning mb-4 position-relative alert-dismissible fade show" id="super-rh-mutation-alert-{{ $mutation->id }}" role="alert" data-no-auto-hide="true" style="box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075); padding-right: 3.5rem;">
                 <button type="button" onclick="dismissSuperRhMutationAlert({{ $mutation->id }})" class="btn-close position-absolute top-0 end-0 m-3" aria-label="Fermer" style="z-index: 10; cursor: pointer;"></button>
                 <div class="d-flex align-items-center">
                     <i class="fas fa-exclamation-triangle me-3 fs-4"></i>
@@ -318,7 +353,7 @@
                             <div><i class="fas fa-tag me-1"></i><strong>Type:</strong> {{ ucfirst($mutation->mutation_type) }}</div>
                         </div>
                     </div>
-                    <a href="{{ route('mutations.super-rh.validate', $mutation->id) }}" class="btn btn-warning btn-sm">
+                    <a href="{{ route('mutations.super-rh.validate', $mutation->id) }}" class="btn btn-warning btn-sm ms-3">
                         <i class="fas fa-check-circle me-1"></i>
                         @if($isIntermediateReview)
                             Réviser
@@ -642,6 +677,9 @@
                                             <label class="text-muted small mb-1 d-block">Chef</label>
                                             @if($chefName && $chefPpr)
                                                 <p class="fw-bold mb-0 text-dark">{{ $chefName }}</p>
+                                                @if($chefEntiteName)
+                                                    <small class="text-muted d-block mt-1">{{ $chefEntiteName }}</small>
+                                                @endif
                                             @else
                                                 <p class="fw-bold mb-0 text-muted">Non défini</p>
                                             @endif
@@ -874,6 +912,15 @@
     position: absolute !important;
     top: 0.75rem !important;
     right: 0.75rem !important;
+    margin: 0 !important;
+}
+
+/* Ensure alert content doesn't overlap with close button for status change alerts */
+.alert-dismissible[id^="alert-"],
+.alert-dismissible[id^="mutation-alert-"],
+.alert-dismissible[id^="avis-retour-alert-"],
+.alert-dismissible[id^="super-rh-mutation-alert-"] {
+    padding-right: 3.5rem;
 }
 
 .alert-dismissible .btn-close:hover {
@@ -1056,6 +1103,94 @@ function dismissSuperRhMutationAlert(mutationId) {
             dismissButton.disabled = false;
         }
         alert('Erreur lors de la fermeture de l\'alerte. Veuillez réessayer.');
+    });
+}
+
+// Handle persistent alert dismissal
+document.addEventListener('DOMContentLoaded', function() {
+    // Check and hide dismissed alerts on page load
+    const alerts = document.querySelectorAll('[data-alert-key]');
+    alerts.forEach(function(alert) {
+        const alertKey = alert.getAttribute('data-alert-key');
+        if (localStorage.getItem(alertKey) === 'dismissed') {
+            alert.style.display = 'none';
+        }
+    });
+
+    // Handle close button clicks
+    alerts.forEach(function(alert) {
+        const closeButton = alert.querySelector('.btn-close');
+        if (closeButton) {
+            closeButton.addEventListener('click', function() {
+                const alertKey = alert.getAttribute('data-alert-key');
+                if (alertKey) {
+                    localStorage.setItem(alertKey, 'dismissed');
+                }
+            });
+        }
+    });
+});
+
+// Dismiss avis de retour alert
+function dismissAvisRetourAlert(demandeId) {
+    const alertElement = document.getElementById('avis-retour-alert-' + demandeId);
+    if (!alertElement) {
+        return;
+    }
+
+    // Disable button to prevent double clicks
+    const dismissButton = alertElement.querySelector('.btn-close');
+    if (dismissButton) {
+        dismissButton.disabled = true;
+    }
+
+    // Hide alert immediately for better UX (non-blocking)
+    alertElement.style.transition = 'opacity 0.3s ease';
+    alertElement.style.opacity = '0';
+    
+    // Try to save dismissal on server, but don't block if it fails
+    fetch('{{ route("hr.dashboard.dismiss-avis-retour-alert", ":id") }}'.replace(':id', demandeId), {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+            'Accept': 'application/json'
+        },
+        credentials: 'same-origin'
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            // Remove alert after fade out
+            setTimeout(() => {
+                if (alertElement && alertElement.parentNode) {
+                    alertElement.remove();
+                }
+            }, 300);
+        } else {
+            // If server says no, still remove it locally but log the error
+            console.warn('Server dismissed alert but returned non-success:', data);
+            setTimeout(() => {
+                if (alertElement && alertElement.parentNode) {
+                    alertElement.remove();
+                }
+            }, 300);
+        }
+    })
+    .catch(error => {
+        // On error, still remove the alert locally (non-blocking)
+        console.error('Error dismissing avis retour alert:', error);
+        // Remove alert after fade out even on error
+        setTimeout(() => {
+            if (alertElement && alertElement.parentNode) {
+                alertElement.remove();
+            }
+        }, 300);
     });
 }
 </script>

@@ -27,6 +27,10 @@ use App\Http\Controllers\DeplacementController;
 Route::get('/health', [HealthController::class, 'index'])->name('health');
 Route::get('/health/detailed', [HealthController::class, 'detailed'])->name('health.detailed');
 
+// Public Leave Verification Route (no auth required)
+Route::get('/verification/resultat1.php', [LeaveController::class, 'verifyLeave'])->name('leaves.verify');
+Route::get('/verification/{code}', [LeaveController::class, 'verifyLeave'])->name('leaves.verify.code');
+
 // Authentication Routes
 Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
@@ -129,6 +133,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/hr/dashboard/dismiss-alert/{demandeId}', [DashboardController::class, 'dismissAlert'])->name('hr.dashboard.dismiss-alert');
     Route::post('/hr/dashboard/dismiss-mutation-alert/{mutationId}', [DashboardController::class, 'dismissMutationAlert'])->name('hr.dashboard.dismiss-mutation-alert');
     Route::post('/hr/dashboard/dismiss-super-rh-mutation-alert/{mutationId}', [DashboardController::class, 'dismissSuperRhMutationAlert'])->name('hr.dashboard.dismiss-super-rh-mutation-alert');
+    Route::post('/hr/dashboard/dismiss-avis-retour-alert/{demandeId}', [DashboardController::class, 'dismissAvisRetourAlert'])->name('hr.dashboard.dismiss-avis-retour-alert');
 
     // HR User Management Routes
     Route::prefix('hr/users')->name('hr.users.')->group(function () {
@@ -146,7 +151,8 @@ Route::middleware('auth')->group(function () {
         Route::middleware('role:admin|Collaborateur Rh|super Collaborateur Rh')->group(function () {
             Route::get('/{user}/transfer', [HRUserController::class, 'showTransfer'])->name('transfer');
             Route::post('/{user}/transfer', [HRUserController::class, 'processTransfer'])->name('transfer.store');
-            Route::post('/swap-chefs', [HRUserController::class, 'swapChefs'])->name('swap-chefs');
+            Route::get('/swap-chefs', [HRUserController::class, 'showSwapChefs'])->name('swap-chefs');
+            Route::post('/swap-chefs', [HRUserController::class, 'swapChefs'])->name('swap-chefs.store');
         });
         
         // Show route accessible by Admin and Collaborateur Rh (handled in controller)
@@ -177,6 +183,20 @@ Route::middleware('auth')->group(function () {
         Route::get('/declare-retour', [LeaveController::class, 'showDeclareRetour'])->name('declare-retour');
         Route::post('/declare-retour', [LeaveController::class, 'storeDeclareRetour'])->name('store-declare-retour');
         Route::post('/', [LeaveController::class, 'store'])->name('store');
+        
+        // Specific routes must come before catch-all routes to prevent route conflicts
+        Route::post('/avis-depart/{avisDepart}/validate', [LeaveController::class, 'validateAvisDepart'])->name('validate-avis-depart');
+        Route::post('/avis-depart/{avisDepart}/reject', [LeaveController::class, 'rejectAvisDepart'])->name('reject-avis-depart');
+        Route::post('/avis-retour/{avisRetour}/validate', [LeaveController::class, 'validateAvisRetour'])->name('validate-avis-retour');
+        Route::put('/avis-retour/{avisRetour}/update-date-retour-effectif', [LeaveController::class, 'updateDateRetourEffectif'])->name('update-date-retour-effectif');
+        Route::get('/avis-retour/{avisRetour}/download-explanation-pdf', [LeaveController::class, 'downloadExplanationPDF'])->name('download-explanation-pdf');
+        Route::get('/avis-depart/{avisDepart}/download-pdf', [LeaveController::class, 'downloadAvisDepartPDF'])->name('download-avis-depart-pdf');
+        Route::get('/avis-retour/{avisRetour}/download-pdf', [LeaveController::class, 'downloadAvisRetourPDF'])->name('download-avis-retour-pdf');
+        Route::get('/avis-depart/{avisDepart}/view-pdf', [LeaveController::class, 'viewAvisDepartPDF'])->name('view-avis-depart-pdf');
+        Route::get('/avis-retour/{avisRetour}/view-pdf', [LeaveController::class, 'viewAvisRetourPDF'])->name('view-avis-retour-pdf');
+        Route::get('/user-info/{ppr}', [LeaveController::class, 'showUserInfo'])->name('user-info');
+        
+        // Catch-all routes must come last
         Route::get('/{demande}', [LeaveController::class, 'show'])->name('show');
         Route::get('/{demande}/edit', [LeaveController::class, 'edit'])->name('edit');
         Route::put('/{demande}', [LeaveController::class, 'update'])->name('update');
@@ -185,14 +205,6 @@ Route::middleware('auth')->group(function () {
         Route::patch('/{demande}/reject', [LeaveController::class, 'reject'])->name('reject');
         Route::patch('/{demande}/approve-chef', [LeaveController::class, 'approveAsChef'])->name('approve-chef');
         Route::post('/{demande}/reject-chef', [LeaveController::class, 'rejectAsChef'])->name('reject-chef');
-        Route::post('/avis-depart/{avisDepart}/validate', [LeaveController::class, 'validateAvisDepart'])->name('validate-avis-depart');
-        Route::post('/avis-depart/{avisDepart}/reject', [LeaveController::class, 'rejectAvisDepart'])->name('reject-avis-depart');
-        Route::post('/avis-retour/{avisRetour}/validate', [LeaveController::class, 'validateAvisRetour'])->name('validate-avis-retour');
-        Route::put('/avis-retour/{avisRetour}/update-date-retour-effectif', [LeaveController::class, 'updateDateRetourEffectif'])->name('update-date-retour-effectif');
-        Route::get('/avis-retour/{avisRetour}/download-explanation-pdf', [LeaveController::class, 'downloadExplanationPDF'])->name('download-explanation-pdf');
-        Route::get('/avis-depart/{avisDepart}/download-pdf', [LeaveController::class, 'downloadAvisDepartPDF'])->name('download-avis-depart-pdf');
-        Route::get('/avis-retour/{avisRetour}/download-pdf', [LeaveController::class, 'downloadAvisRetourPDF'])->name('download-avis-retour-pdf');
-        Route::get('/user-info/{ppr}', [LeaveController::class, 'showUserInfo'])->name('user-info');
     });
 
     // Leave Tracking Routes
@@ -293,6 +305,8 @@ Route::middleware('auth')->group(function () {
         Route::get('/', [NotificationController::class, 'index'])->name('index');
         Route::patch('/{id}/read', [NotificationController::class, 'markAsRead'])->name('mark-as-read');
         Route::patch('/mark-all-read', [NotificationController::class, 'markAllAsRead'])->name('mark-all-read');
+        Route::delete('/delete-all', [NotificationController::class, 'deleteAll'])->name('delete-all');
+        Route::delete('/{id}', [NotificationController::class, 'destroy'])->name('destroy');
         Route::get('/get', [NotificationController::class, 'get'])->name('get');
     });
 });

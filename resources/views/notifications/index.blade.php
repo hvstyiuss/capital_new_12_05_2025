@@ -9,11 +9,18 @@
             <h1 class="h3 mb-1 fw-bold text-dark">Notifications</h1>
             <p class="text-muted mb-0">Consultez toutes vos notifications</p>
         </div>
-        @if($unreadCount > 0)
-            <button class="btn btn-success" onclick="markAllAsRead()">
-                <i class="fas fa-check-double me-2"></i>Marquer tout comme lu
-            </button>
-        @endif
+        <div class="d-flex gap-2">
+            @if($unreadCount > 0)
+                <button class="btn btn-success" onclick="markAllAsRead()">
+                    <i class="fas fa-check-double me-2"></i>Marquer tout comme lu
+                </button>
+            @endif
+            @if($notifications->count() > 0)
+                <button class="btn btn-danger" onclick="deleteAllNotifications()">
+                    <i class="fas fa-trash me-2"></i>Supprimer tout
+                </button>
+            @endif
+        </div>
     </div>
 
     <div class="card shadow-sm">
@@ -34,13 +41,20 @@
                                         <i class="fas fa-clock me-1"></i>{{ $notification->time_ago }}
                                     </small>
                                 </div>
-                                @if($notification->isUnread())
-                                    <button class="btn btn-sm btn-outline-primary" 
-                                            onclick="markAsRead('{{ $notification->id }}')"
-                                            title="Marquer comme lu">
-                                        <i class="fas fa-check"></i>
+                                <div class="d-flex gap-2">
+                                    @if($notification->isUnread())
+                                        <button class="btn btn-sm btn-outline-primary" 
+                                                onclick="markAsRead('{{ $notification->id }}')"
+                                                title="Marquer comme lu">
+                                            <i class="fas fa-check"></i>
+                                        </button>
+                                    @endif
+                                    <button class="btn btn-sm btn-outline-danger" 
+                                            onclick="deleteNotification('{{ $notification->id }}')"
+                                            title="Supprimer">
+                                        <i class="fas fa-trash"></i>
                                     </button>
-                                @endif
+                                </div>
                             </div>
                             @if($notification->action_url)
                                 <div class="mt-2">
@@ -111,6 +125,72 @@ function markAllAsRead() {
     })
     .catch(error => {
         console.error('Error:', error);
+    });
+}
+
+function deleteNotification(notificationId) {
+    if (!confirm('Êtes-vous sûr de vouloir supprimer cette notification ?')) {
+        return;
+    }
+    
+    fetch(`/notifications/${notificationId}`, {
+        method: 'DELETE',
+        headers: {
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+            'Content-Type': 'application/json',
+        },
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const notificationItem = document.querySelector(`[data-notification-id="${notificationId}"]`);
+            if (notificationItem) {
+                // Add fade out animation
+                notificationItem.style.transition = 'opacity 0.3s ease';
+                notificationItem.style.opacity = '0';
+                setTimeout(() => {
+                    notificationItem.remove();
+                    
+                    // Check if there are no more notifications
+                    const remainingNotifications = document.querySelectorAll('.notification-item');
+                    if (remainingNotifications.length === 0) {
+                        location.reload();
+                    }
+                }, 300);
+            }
+        } else {
+            alert('Erreur lors de la suppression de la notification.');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Erreur lors de la suppression de la notification.');
+    });
+}
+
+function deleteAllNotifications() {
+    if (!confirm('Êtes-vous sûr de vouloir supprimer toutes les notifications ? Cette action est irréversible.')) {
+        return;
+    }
+    
+    fetch('/notifications/delete-all', {
+        method: 'DELETE',
+        headers: {
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+            'Content-Type': 'application/json',
+        },
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('Erreur lors de la suppression des notifications.');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Erreur lors de la suppression des notifications.');
     });
 }
 </script>

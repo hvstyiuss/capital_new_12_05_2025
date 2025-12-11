@@ -10,6 +10,7 @@ use App\Models\Parcours;
 use App\Models\Mutation;
 use App\Models\Deplacement;
 use App\Models\AvisDepart;
+use App\Models\AvisRetour;
 use App\Models\DismissedAlert;
 use App\Services\NotificationService;
 use App\Services\MutationService;
@@ -66,6 +67,7 @@ class DashboardController extends Controller
         
         $chefName = null;
         $chefPpr = null;
+        $chefEntiteName = null;
         if ($currentParcours && $currentParcours->entite) {
             // Load the entite with its parcours to get the chef
             $entite = $currentParcours->entite;
@@ -81,6 +83,7 @@ class DashboardController extends Controller
                     if ($chefUser) {
                         $chefName = $chefUser->fname . ' ' . $chefUser->lname;
                         $chefPpr = $chefUser->ppr;
+                        $chefEntiteName = $current->name; // Get the entity name where chef is assigned
                         break;
                     }
                 }
@@ -114,17 +117,38 @@ class DashboardController extends Controller
         if ($isChef) {
             // Get entities where user is chef
             $chefEntiteIds = Entite::where('chef_ppr', $user->ppr)
-                ->pluck('id');
+                ->pluck('id')
+                ->toArray();
             
-            // Get PPRs of users in these entities
-            $userPprs = Parcours::whereIn('entite_id', $chefEntiteIds)
+            // Get all descendant entities (children, grandchildren, etc.)
+            $allEntiteIds = $chefEntiteIds;
+            foreach ($chefEntiteIds as $entiteId) {
+                $entite = Entite::find($entiteId);
+                if ($entite) {
+                    $descendants = $this->getDescendantEntiteIds($entite);
+                    $allEntiteIds = array_merge($allEntiteIds, $descendants);
+                }
+            }
+            $allEntiteIds = array_unique($allEntiteIds);
+            
+            // Get PPRs of users who are CURRENTLY in these entities (active parcours only)
+            // Only include users with active parcours (date_fin is null or in the future)
+            $userPprs = Parcours::whereIn('entite_id', $allEntiteIds)
+                ->where('ppr', '!=', $user->ppr)
                 ->where(function($query) {
+                    // Only active parcours: no end date OR end date is in the future
                     $query->whereNull('date_fin')
                           ->orWhere('date_fin', '>=', now());
                 })
-                ->where('ppr', '!=', $user->ppr)
+                ->where(function($query) {
+                    // Ensure date_debut is not in the future (parcours has started)
+                    $query->whereNull('date_debut')
+                          ->orWhere('date_debut', '<=', now());
+                })
+                ->orderBy('date_debut', 'desc') // Get most recent parcours first
+                ->get()
+                ->unique('ppr') // Only keep one parcours per user (most recent)
                 ->pluck('ppr')
-                ->unique()
                 ->toArray();
             
             // Get pending demandes from these users (avis de départ is pending)
@@ -249,6 +273,71 @@ class DashboardController extends Controller
             }
         }
         
+        // Check for recent avis de retour declarations from collaborators (for chefs)
+        $recentAvisRetourDeclarations = [];
+        $dismissedAvisRetourIds = DismissedAlert::where('ppr', $user->ppr)
+            ->where('alert_type', 'avis_retour_declaration')
+            ->pluck('demande_id')
+            ->toArray();
+
+        if ($isChef) {
+            // Get entities where user is chef
+            $chefEntiteIds = Entite::where('chef_ppr', $user->ppr)
+                ->pluck('id')
+                ->toArray();
+            
+            // Get all descendant entities (children, grandchildren, etc.)
+            $allEntiteIds = $chefEntiteIds;
+            foreach ($chefEntiteIds as $entiteId) {
+                $entite = Entite::find($entiteId);
+                if ($entite) {
+                    $descendants = $this->getDescendantEntiteIds($entite);
+                    $allEntiteIds = array_merge($allEntiteIds, $descendants);
+                }
+            }
+            $allEntiteIds = array_unique($allEntiteIds);
+            
+            // Get PPRs of users who are CURRENTLY in these entities (active parcours only)
+            $userPprs = Parcours::whereIn('entite_id', $allEntiteIds)
+                ->where('ppr', '!=', $user->ppr)
+                ->where(function($query) {
+                    // Only active parcours: no end date OR end date is in the future
+                    $query->whereNull('date_fin')
+                          ->orWhere('date_fin', '>=', now());
+                })
+                ->where(function($query) {
+                    // Ensure date_debut is not in the future (parcours has started)
+                    $query->whereNull('date_debut')
+                          ->orWhere('date_debut', '<=', now());
+                })
+                ->orderBy('date_debut', 'desc') // Get most recent parcours first
+                ->get()
+                ->unique('ppr') // Only keep one parcours per user (most recent)
+                ->pluck('ppr')
+                ->toArray();
+
+            // Get recent avis de retour declarations (within last 7 days)
+            $recentAvisRetours = Demande::whereIn('ppr', $userPprs)
+                ->whereHas('avis.avisRetour', function($query) {
+                    $query->where('created_at', '>=', Carbon::now()->subDays(7));
+                })
+                ->whereNotIn('id', $dismissedAvisRetourIds)
+                ->with(['user', 'avis.avisRetour', 'avis.avisDepart'])
+                ->orderBy('updated_at', 'desc')
+                ->get();
+
+            foreach ($recentAvisRetours as $demande) {
+                $avisRetour = $demande->avis->avisRetour ?? null;
+                if ($avisRetour) {
+                    $recentAvisRetourDeclarations[] = [
+                        'demande' => $demande,
+                        'avis_retour' => $avisRetour,
+                        'is_recent' => $avisRetour->created_at->isToday(),
+                    ];
+                }
+            }
+        }
+
         // Check for recent mutation status changes
         $recentMutationChanges = [];
         $dismissedMutationIds = DismissedAlert::where('ppr', $user->ppr)
@@ -382,7 +471,7 @@ class DashboardController extends Controller
             
         // Regular user dashboard - show their personal info
         $mutationService = $this->mutationService;
-        return view('hr.dashboard', compact('user', 'isChef', 'pendingDemandesForChef', 'pendingDemandesCount', 'pendingMutationsForChef', 'pendingMutationsCount', 'needsReturnDeclaration', 'returnDeclarationDemande', 'recentStatusChanges', 'recentMutationChanges', 'chefName', 'chefPpr', 'currentParcours', 'pendingSuperCollaborateurRhMutations', 'userDirection', 'mutationService'));
+        return view('hr.dashboard', compact('user', 'isChef', 'pendingDemandesForChef', 'pendingDemandesCount', 'pendingMutationsForChef', 'pendingMutationsCount', 'needsReturnDeclaration', 'returnDeclarationDemande', 'recentStatusChanges', 'recentMutationChanges', 'recentAvisRetourDeclarations', 'chefName', 'chefPpr', 'chefEntiteName', 'currentParcours', 'pendingSuperCollaborateurRhMutations', 'userDirection', 'mutationService'));
     }
 
     public function getStatistics()
@@ -811,7 +900,7 @@ class DashboardController extends Controller
     /**
      * Dismiss a super Collaborateur Rh mutation alert
      */
-    public function dismissSuperRhMutationAlert(Request $request, $mutationId)
+public function dismissSuperRhMutationAlert(Request $request, $mutationId)
     {
         $user = auth()->user();
         
@@ -836,5 +925,82 @@ class DashboardController extends Controller
             'success' => true,
             'message' => 'Alert dismissed successfully',
         ]);
+    }
+
+    /**
+     * Dismiss an avis de retour declaration alert for the chef
+     */
+    public function dismissAvisRetourAlert(Request $request, $demandeId)
+    {
+        $user = auth()->user();
+        
+        // Verify user is a chef
+        if (!$user->isChef()) {
+            abort(403, 'Unauthorized. You must be a chef to dismiss this alert.');
+        }
+        
+        // Verify the demande exists and belongs to one of the chef's collaborators
+        $chefEntiteIds = Entite::where('chef_ppr', $user->ppr)
+            ->pluck('id')
+            ->toArray();
+        
+        // Get all descendant entities
+        $allEntiteIds = $chefEntiteIds;
+        foreach ($chefEntiteIds as $entiteId) {
+            $entite = Entite::find($entiteId);
+            if ($entite) {
+                $descendants = $this->getDescendantEntiteIds($entite);
+                $allEntiteIds = array_merge($allEntiteIds, $descendants);
+            }
+        }
+        $allEntiteIds = array_unique($allEntiteIds);
+        
+        // Get PPRs of users who are CURRENTLY in these entities (active parcours only)
+        $userPprs = Parcours::whereIn('entite_id', $allEntiteIds)
+            ->where('ppr', '!=', $user->ppr)
+            ->where(function($query) {
+                // Only active parcours: no end date OR end date is in the future
+                $query->whereNull('date_fin')
+                      ->orWhere('date_fin', '>=', now());
+            })
+            ->where(function($query) {
+                // Ensure date_debut is not in the future (parcours has started)
+                $query->whereNull('date_debut')
+                      ->orWhere('date_debut', '<=', now());
+            })
+            ->orderBy('date_debut', 'desc') // Get most recent parcours first
+            ->get()
+            ->unique('ppr') // Only keep one parcours per user (most recent)
+            ->pluck('ppr')
+            ->toArray();
+        
+        $demande = Demande::where('id', $demandeId)
+            ->whereIn('ppr', $userPprs)
+            ->firstOrFail();
+        
+        // Create or update dismissed alert record
+        DismissedAlert::firstOrCreate([
+            'ppr' => $user->ppr,
+            'demande_id' => $demandeId,
+            'alert_type' => 'avis_retour_declaration',
+        ]);
+        
+        return response()->json([
+            'success' => true,
+            'message' => 'Alert dismissed successfully',
+        ]);
+    }
+
+    /**
+     * Recursively get all descendant entity IDs.
+     */
+    private function getDescendantEntiteIds(Entite $entite, array &$ids = []): array
+    {
+        $children = Entite::where('parent_id', $entite->id)->get();
+        foreach ($children as $child) {
+            $ids[] = $child->id;
+            $this->getDescendantEntiteIds($child, $ids);
+        }
+        return $ids;
     }
 }

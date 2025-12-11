@@ -9,7 +9,7 @@
         <div class="d-flex justify-content-between align-items-center">
             <div>
                 <h1 class="h3 mb-1 text-gray-800">
-                    <i class="fas fa-users me-2 text-info"></i>
+                    <i class="fas fa-users me-2 text-primary"></i>
                     Gestion des Utilisateurs
                 </h1>
                 <p class="text-muted mb-0">Administration des utilisateurs et des rôles</p>
@@ -18,9 +18,9 @@
                 <a href="{{ route('hr.users.create') }}" class="btn btn-success">
                     <i class="fas fa-plus me-2"></i>Nouvel Utilisateur
                 </a>
-                <button type="button" class="btn btn-info" data-bs-toggle="modal" data-bs-target="#swapChefsModal">
+                <a href="{{ route('hr.users.swap-chefs') }}" class="btn btn-primary">
                     <i class="fas fa-sync-alt me-2"></i>Échange de Chefs
-                </button>
+                </a>
             </div>
         </div>
     </div>
@@ -33,12 +33,12 @@
                     <div class="d-flex align-items-center">
                         <div class="flex-shrink-0">
                             <div class="rounded-circle p-3" style="background-color: rgba(13, 202, 240, 0.1);">
-                                <i class="fas fa-users fa-2x text-info"></i>
+                                <i class="fas fa-users fa-2x text-primary"></i>
                             </div>
                         </div>
                         <div class="flex-grow-1 ms-3">
                             <h6 class="text-muted mb-1 small">Total Utilisateurs</h6>
-                            <h3 class="mb-0 fw-bold text-info">{{ number_format($totalUsers ?? $users->total()) }}</h3>
+                            <h3 class="mb-0 fw-bold text-primary">{{ number_format($totalUsers ?? $users->total()) }}</h3>
                             <small class="text-muted">Enregistrés</small>
                         </div>
                     </div>
@@ -69,12 +69,12 @@
                     <div class="d-flex align-items-center">
                         <div class="flex-shrink-0">
                             <div class="rounded-circle p-3" style="background-color: rgba(13, 202, 240, 0.1);">
-                                <i class="fas fa-shield-alt fa-2x text-info"></i>
+                                <i class="fas fa-shield-alt fa-2x text-primary"></i>
                             </div>
                         </div>
                         <div class="flex-grow-1 ms-3">
                             <h6 class="text-muted mb-1 small">Rôles Créés</h6>
-                            <h3 class="mb-0 fw-bold text-info">{{ $roles->count() }}</h3>
+                            <h3 class="mb-0 fw-bold text-primary">{{ $roles->count() }}</h3>
                             <small class="text-muted">Rôles disponibles</small>
                         </div>
                     </div>
@@ -87,12 +87,12 @@
                     <div class="d-flex align-items-center">
                         <div class="flex-shrink-0">
                             <div class="rounded-circle p-3" style="background-color: rgba(13, 202, 240, 0.1);">
-                                <i class="fas fa-calendar-plus fa-2x text-info"></i>
+                                <i class="fas fa-calendar-plus fa-2x text-primary"></i>
                             </div>
                         </div>
                         <div class="flex-grow-1 ms-3">
                             <h6 class="text-muted mb-1 small">Nouveaux (30j)</h6>
-                            <h3 class="mb-0 fw-bold text-info">{{ number_format($newUsers30d ?? 0) }}</h3>
+                            <h3 class="mb-0 fw-bold text-primary">{{ number_format($newUsers30d ?? 0) }}</h3>
                             <small class="text-muted">Derniers 30 jours</small>
                         </div>
                     </div>
@@ -105,7 +105,7 @@
     <div class="card shadow-sm border-0 mb-4">
         <div class="card-header bg-white border-bottom py-3">
             <h5 class="mb-0 fw-semibold">
-                <i class="fas fa-filter me-2 text-info"></i>Filtres
+                <i class="fas fa-filter me-2 text-primary"></i>Filtres
             </h5>
         </div>
         <div class="card-body">
@@ -179,7 +179,7 @@
         <div class="card-header bg-white border-bottom py-3">
             <div class="d-flex justify-content-between align-items-center">
                 <h5 class="mb-0 fw-semibold">
-                    <i class="fas fa-table me-2 text-info"></i>Liste des Utilisateurs
+                    <i class="fas fa-table me-2 text-primary"></i>Liste des Utilisateurs
                 </h5>
                 @if(request('role') || request('status') || request('search') || request('entite_id'))
                     <a href="{{ route('hr.users.index') }}" class="btn btn-sm btn-outline-secondary">
@@ -201,179 +201,10 @@
     </div>
 </div>
 
-<!-- Swap Chefs Modal -->
-<div class="modal fade" id="swapChefsModal" tabindex="-1" aria-labelledby="swapChefsModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header bg-info text-white">
-                <h5 class="modal-title" id="swapChefsModalLabel">
-                    <i class="fas fa-sync-alt me-2"></i>Échange de Chefs
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <p class="text-muted mb-4">
-                    Échangez les chefs entre deux entités. Cette fonctionnalité permet de transférer simultanément deux chefs entre leurs entités respectives.
-                </p>
-                <form id="swapChefsForm">
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <label for="swap_entity_1" class="form-label fw-semibold">
-                                Première Entité <span class="text-danger">*</span>
-                            </label>
-                            <select id="swap_entity_1" class="form-select" required>
-                                <option value="">Sélectionnez une entité avec chef</option>
-                                @foreach($entitesWithChefs ?? [] as $entite)
-                                    <option value="{{ $entite->id }}" data-chef-ppr="{{ $entite->chef_ppr }}">
-                                        {{ $entite->name }} (Chef: {{ optional($entite->chef)->name ?? $entite->chef_ppr }})
-                                    </option>
-                                @endforeach
-                            </select>
-                            <small class="form-text text-muted">
-                                <i class="fas fa-info-circle me-1"></i>Sélectionnez la première entité
-                            </small>
-                        </div>
-                        <div class="col-md-6">
-                            <label for="swap_entity_2" class="form-label fw-semibold">
-                                Deuxième Entité <span class="text-danger">*</span>
-                            </label>
-                            <select id="swap_entity_2" class="form-select" required>
-                                <option value="">Sélectionnez une entité avec chef</option>
-                                @foreach($entitesWithChefs ?? [] as $entite)
-                                    <option value="{{ $entite->id }}" data-chef-ppr="{{ $entite->chef_ppr }}">
-                                        {{ $entite->name }} (Chef: {{ optional($entite->chef)->name ?? $entite->chef_ppr }})
-                                    </option>
-                                @endforeach
-                            </select>
-                            <small class="form-text text-muted">
-                                <i class="fas fa-info-circle me-1"></i>Sélectionnez la deuxième entité
-                            </small>
-                        </div>
-                        <div class="col-md-12">
-                            <label for="swap_date" class="form-label fw-semibold">
-                                Date d'échange <span class="text-danger">*</span>
-                            </label>
-                            <input type="date" id="swap_date" class="form-control" value="{{ date('Y-m-d') }}" min="{{ date('Y-m-d') }}" required>
-                            <small class="form-text text-muted">
-                                <i class="fas fa-info-circle me-1"></i>La date doit être aujourd'hui ou une date future
-                            </small>
-                        </div>
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                    <i class="fas fa-times me-2"></i>Annuler
-                </button>
-                <button type="button" class="btn btn-info" id="swapChefsBtn">
-                    <i class="fas fa-sync-alt me-2"></i>Échanger les Chefs
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
 @endsection
 
 @push('scripts')
 <script>
-// Swap Chefs Functionality
-document.addEventListener('DOMContentLoaded', function() {
-    const swapChefsBtn = document.getElementById('swapChefsBtn');
-    const swapEntity1 = document.getElementById('swap_entity_1');
-    const swapEntity2 = document.getElementById('swap_entity_2');
-    const swapDate = document.getElementById('swap_date');
-    const swapChefsModal = document.getElementById('swapChefsModal');
-
-    if (swapChefsBtn) {
-        swapChefsBtn.addEventListener('click', function() {
-            const entity1Id = swapEntity1.value;
-            const entity2Id = swapEntity2.value;
-            const date = swapDate.value;
-
-            // Validation
-            if (!entity1Id || !entity2Id) {
-                alert('Veuillez sélectionner deux entités avec des chefs.');
-                return;
-            }
-
-            if (entity1Id === entity2Id) {
-                alert('Veuillez sélectionner deux entités différentes.');
-                return;
-            }
-
-            if (!date) {
-                alert('Veuillez sélectionner une date d\'échange.');
-                return;
-            }
-
-            const entity1Option = swapEntity1.options[swapEntity1.selectedIndex];
-            const entity2Option = swapEntity2.options[swapEntity2.selectedIndex];
-            const entity1Name = entity1Option ? entity1Option.text.split(' (Chef:')[0] : '';
-            const entity2Name = entity2Option ? entity2Option.text.split(' (Chef:')[0] : '';
-
-            if (!confirm(`Êtes-vous sûr de vouloir échanger les chefs entre ces deux entités?\n\nEntité 1: ${entity1Name}\nEntité 2: ${entity2Name}\n\nDate: ${date}`)) {
-                return;
-            }
-
-            // Disable button during request
-            swapChefsBtn.disabled = true;
-            swapChefsBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Échange en cours...';
-
-            // Make AJAX request to swap chefs
-            fetch('{{ route("hr.users.swap-chefs") }}', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                    'Accept': 'application/json'
-                },
-                body: JSON.stringify({
-                    entity1_id: entity1Id,
-                    entity2_id: entity2Id,
-                    date: date
-                })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    // Close modal
-                    const modal = bootstrap.Modal.getInstance(swapChefsModal);
-                    if (modal) {
-                        modal.hide();
-                    }
-                    // Show success message
-                    alert('Les chefs ont été échangés avec succès!');
-                    // Reload page to reflect changes
-                    window.location.reload();
-                } else {
-                    alert('Erreur: ' + (data.message || 'Une erreur est survenue lors de l\'échange.'));
-                    swapChefsBtn.disabled = false;
-                    swapChefsBtn.innerHTML = '<i class="fas fa-sync-alt me-2"></i>Échanger les Chefs';
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('Une erreur est survenue lors de l\'échange des chefs.');
-                swapChefsBtn.disabled = false;
-                swapChefsBtn.innerHTML = '<i class="fas fa-sync-alt me-2"></i>Échanger les Chefs';
-            });
-        });
-    }
-
-    // Reset form when modal is closed
-    if (swapChefsModal) {
-        swapChefsModal.addEventListener('hidden.bs.modal', function() {
-            document.getElementById('swapChefsForm').reset();
-            swapDate.value = '{{ date('Y-m-d') }}';
-            if (swapChefsBtn) {
-                swapChefsBtn.disabled = false;
-                swapChefsBtn.innerHTML = '<i class="fas fa-sync-alt me-2"></i>Échanger les Chefs';
-            }
-        });
-    }
-});
-
 function handleToggleStatus(userPpr, currentStatus) {
     const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
     const action = newStatus === 'active' ? 'activer' : 'désactiver';
@@ -773,26 +604,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
 .table-hover tbody tr:hover {
     background-color: #f8f9fa;
-}
-
-/* Modal fixes - Ensure modals appear above all elements */
-.modal {
-    z-index: 10050 !important;
-}
-
-.modal-backdrop {
-    z-index: 10040 !important;
-    background-color: rgba(0, 0, 0, 0.5) !important;
-}
-
-.modal-dialog {
-    z-index: 10051 !important;
-    position: relative;
-}
-
-.modal-content {
-    position: relative;
-    z-index: 10052 !important;
 }
 
 </style>

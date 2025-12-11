@@ -14,7 +14,7 @@
         <tbody id="usersTableBody">
             @forelse($users as $user)
                 @php
-                    $email = $user->email ?? $user->userInfo->email ?? null;
+                    $email = $user->email ?? $user->userprimary->email ?? null;
                 @endphp
                 <tr>
                     <td>
@@ -28,7 +28,7 @@
                                      class="rounded-circle me-2" 
                                      width="32" height="32" style="object-fit: cover;">
                             @else
-                                <div class="bg-info rounded-circle d-flex align-items-center justify-content-center me-2" 
+                                <div class="bg-primary rounded-circle d-flex align-items-center justify-content-center me-2" 
                                      style="width: 32px; height: 32px;">
                                     <span class="text-white fw-bold small">{{ strtoupper(substr($user->name, 0, 1)) }}</span>
                                 </div>
@@ -47,7 +47,7 @@
                     </td>
                     <td>
                         @forelse($user->roles as $role)
-                            <span class="badge bg-info me-1 mb-1 rounded-pill">
+                            <span class="badge bg-primary me-1 mb-1 rounded-pill">
                                 <i class="fas fa-shield-alt me-1"></i>{{ ucfirst($role->name) }}
                             </span>
                         @empty
@@ -71,7 +71,7 @@
                     <td>
                         <div class="d-flex justify-content-center gap-1">
                             <a href="{{ route('hr.users.show', $user) }}" 
-                               class="btn btn-sm btn-outline-info" 
+                               class="btn btn-sm btn-outline-primary" 
                                title="Voir les détails"
                                onclick="event.stopPropagation();">
                                 <i class="fas fa-eye"></i>

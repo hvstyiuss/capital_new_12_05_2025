@@ -312,6 +312,10 @@
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
             overflow: hidden;
             transition: margin-left 0.3s ease;
+            position: relative;
+            z-index: 1;
+            /* Create isolated stacking context to prevent interference with modals */
+            isolation: isolate;
         }
 
         .sidebar.collapsed ~ .content-wrapper {
@@ -525,37 +529,30 @@
                     </button>
                     
                     <!-- User menu -->
-                    <div class="relative" x-data="{ open: false }">
-                        <button @click="open = !open" class="user-profile">
+                    <div class="relative profile-dropdown-app">
+                        <button onclick="toggleProfileApp()" class="user-profile">
                             @php
                                 $currentUser = auth()->user();
-                @endphp
+                            @endphp
                             @if($currentUser && $currentUser->image)
                                 <img src="{{ asset('storage/' . $currentUser->image) }}" alt="Profile" class="profile-pic">
                             @elseif($currentUser && $currentUser->userInfo && $currentUser->userInfo->photo)
                                 <img src="{{ asset('storage/' . $currentUser->userInfo->photo) }}" alt="Profile" class="profile-pic">
                             @else
                                 <img src="https://ui-avatars.com/api/?name={{ urlencode($currentUser->name ?? 'User') }}&background=059669&color=fff" alt="Profile" class="profile-pic">
-                @endif
+                            @endif
                             <div class="hidden sm:block">
                                 <div class="user-name">{{ $currentUser->name ?? 'Utilisateur' }}</div>
                                 @if($currentUser && $currentUser->ppr)
                                     <div class="user-email">PPR: {{ $currentUser->ppr }}</div>
-                @endif
-                </div>
+                                @endif
+                            </div>
                             <i class="fas fa-chevron-down text-xs text-gray-500 hidden sm:block"></i>
                         </button>
                         
-                        <div x-show="open" 
-                             @click.away="open = false"
-                             x-transition:enter="transition ease-out duration-100"
-                             x-transition:enter-start="transform opacity-0 scale-95"
-                             x-transition:enter-end="transform opacity-100 scale-100"
-                             x-transition:leave="transition ease-in duration-75"
-                             x-transition:leave-start="transform opacity-100 scale-100"
-                             x-transition:leave-end="transform opacity-0 scale-95"
+                        <div id="profilePanelApp" 
                              class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50"
-                             style="position: absolute; right: 0; margin-top: 0.5rem; width: 12rem; background: white; border-radius: 0.375rem; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); padding: 0.25rem 0; z-index: 50;">
+                             style="display: none; position: absolute; right: 0; margin-top: 0.5rem; width: 12rem; background: white; border-radius: 0.375rem; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); padding: 0.25rem 0; z-index: 50;">
                             <a href="{{ route('auth.profile') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" style="display: block; padding: 0.5rem 1rem; font-size: 0.875rem; color: #374151; text-decoration: none;">
                                 <i class="fas fa-user mr-2"></i>Mon Profil
                             </a>

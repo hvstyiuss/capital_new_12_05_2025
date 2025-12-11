@@ -1,47 +1,60 @@
 <?php
 
-namespace Database\Seeders;
+namespace App\Console\Commands;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
-use Illuminate\Database\Seeder;
+use Illuminate\Console\Command;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Carbon\Carbon;
 
-class SoldeCongeSeeder extends Seeder
+class UpdateSoldeCongesForAllUsers extends Command
 {
     /**
-     * Run the database seeds.
+     * The name and signature of the console command.
+     *
+     * @var string
      */
-    public function run(): void
+    protected $signature = 'solde:update-all {--solde-precedent=22} {--solde-fix=22}';
+
+    /**
+     * The console command description.
+     *
+     * @var string
+     */
+    protected $description = 'Update solde_conges for all users to have 44 days total (22 precedent + 22 fix)';
+
+    /**
+     * Execute the console command.
+     */
+    public function handle()
     {
+        $soldePrecedent = (int) $this->option('solde-precedent');
+        $soldeFix = (int) $this->option('solde-fix');
+        $soldeActuel = $soldePrecedent + $soldeFix;
+        $currentYear = Carbon::now()->year;
+
+        $this->info("Updating solde_conges for all users...");
+        $this->info("  - solde_precedent: {$soldePrecedent} days");
+        $this->info("  - solde_fix: {$soldeFix} days");
+        $this->info("  - solde_actuel: {$soldeActuel} days (total)");
+
         // Get all active users
         $users = User::where('is_active', true)
             ->where('is_deleted', false)
             ->get();
 
-        $currentYear = Carbon::now()->year;
-        $soldeFix = 22; // Current year's allocation (solde_fix)
-        $soldePrecedent = 22; // Previous year's remaining balance
-        $soldeActuel = $soldePrecedent + $soldeFix; // Total available: 44 days
-        $referenceDecision = 'N/A'; // Default reference decision
-
-        $this->command->info("Creating annual leave balances for {$users->count()} users...");
-        $this->command->info("  - solde_precedent: {$soldePrecedent} days");
-        $this->command->info("  - solde_fix: {$soldeFix} days");
-        $this->command->info("  - solde_actuel: {$soldeActuel} days (total)");
-        $this->command->info("  - reference_decision: {$referenceDecision}");
+        $this->info("Found {$users->count()} active users.");
 
         $created = 0;
         $updated = 0;
 
         foreach ($users as $user) {
-            
             // Check if record already exists
             $exists = DB::table('solde_conges')
                 ->where('ppr', $user->ppr)
                 ->where('type', 'Congé Administratif Annuel')
+                ->where('annee', $currentYear)
                 ->exists();
 
             $updateData = [
@@ -60,16 +73,12 @@ class SoldeCongeSeeder extends Seeder
                 $updateData['annee'] = $currentYear;
             }
 
-            // Add reference_decision if column exists
-            if (Schema::hasColumn('solde_conges', 'reference_decision')) {
-                $updateData['reference_decision'] = $referenceDecision;
-            }
-
             if ($exists) {
                 // Update existing record
                 DB::table('solde_conges')
                     ->where('ppr', $user->ppr)
                     ->where('type', 'Congé Administratif Annuel')
+                    ->where('annee', $currentYear)
                     ->update($updateData);
                 $updated++;
             } else {
@@ -82,30 +91,30 @@ class SoldeCongeSeeder extends Seeder
                     'created_at' => Carbon::now(),
                     'updated_at' => Carbon::now(),
                 ];
-                
+
                 // Add solde_actuel if column exists
                 if (Schema::hasColumn('solde_conges', 'solde_actuel')) {
                     $insertData['solde_actuel'] = $soldeActuel;
                 }
-                
+
                 // Add annee if column exists
                 if (Schema::hasColumn('solde_conges', 'annee')) {
                     $insertData['annee'] = $currentYear;
                 }
-                
-                // Add reference_decision if column exists
-                if (Schema::hasColumn('solde_conges', 'reference_decision')) {
-                    $insertData['reference_decision'] = $referenceDecision;
-                }
-                
+
                 DB::table('solde_conges')->insert($insertData);
                 $created++;
             }
         }
 
-        $this->command->info("Successfully processed leave balances:");
-        $this->command->info("  - Created: {$created}");
-        $this->command->info("  - Updated: {$updated}");
-        $this->command->info("  - Total: " . ($created + $updated));
+        $this->info("Successfully processed leave balances:");
+        $this->info("  - Created: {$created}");
+        $this->info("  - Updated: {$updated}");
+        $this->info("  - Total: " . ($created + $updated));
+        $this->info("All users now have {$soldeActuel} days total ({$soldePrecedent} precedent + {$soldeFix} fix).");
+
+        return Command::SUCCESS;
     }
 }
+
+

@@ -272,26 +272,28 @@
     padding: 1.5rem;
 }
 
-/* Bootstrap Modal Enhancements */
+/* Bootstrap Modal Enhancements - Use Bootstrap's default z-index values */
 .modal {
-    z-index: 10050 !important;
+    z-index: 1055 !important;
+    pointer-events: auto !important;
 }
 
 .modal-backdrop {
-    z-index: 10040 !important;
+    z-index: 1050 !important;
     background-color: rgba(0, 0, 0, 0.5) !important;
+    pointer-events: auto !important;
 }
 
 /* Ensure modals are properly positioned */
 .modal-dialog {
     margin: 1.75rem auto;
-    z-index: 10051 !important;
     position: relative;
+    pointer-events: auto !important;
 }
 
 .modal-content {
     position: relative;
-    z-index: 10052 !important;
+    pointer-events: auto !important;
 }
 
 /* Ensure modals are above all other elements */

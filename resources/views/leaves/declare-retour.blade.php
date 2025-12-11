@@ -232,9 +232,17 @@ function loadDemandeInfo(demandeId) {
     if (dateDepart && defaultDate) {
         const depDate = new Date(dateDepart);
         const retDate = new Date(defaultDate);
-        const diffTime = Math.abs(retDate - depDate);
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1; // +1 to include both departure and return days
-        document.getElementById('nbr_jours_consumes').value = diffDays;
+        
+        // Check if same day
+        const isSameDay = depDate.toDateString() === retDate.toDateString();
+        
+        if (isSameDay) {
+            document.getElementById('nbr_jours_consumes').value = 0; // Same day = 0 days consumed
+        } else {
+            const diffTime = Math.abs(retDate - depDate);
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1; // +1 to include both departure and return days
+            document.getElementById('nbr_jours_consumes').value = diffDays;
+        }
     }
 }
 
@@ -264,12 +272,19 @@ document.getElementById('date_retour_declaree')?.addEventListener('change', func
     if (dateDepart && dateRetourDeclaree) {
         const depDate = new Date(dateDepart);
         const retDate = new Date(dateRetourDeclaree);
-        const diffTime = Math.abs(retDate - depDate);
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+        
+        // Check if same day
+        const isSameDay = depDate.toDateString() === retDate.toDateString();
         
         const nbrJoursInput = document.getElementById('nbr_jours_consumes');
         if (!nbrJoursInput.value || nbrJoursInput.value === '') {
-            nbrJoursInput.value = diffDays;
+            if (isSameDay) {
+                nbrJoursInput.value = 0; // Same day = 0 days consumed
+            } else {
+                const diffTime = Math.abs(retDate - depDate);
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+                nbrJoursInput.value = diffDays;
+            }
         }
     }
 });

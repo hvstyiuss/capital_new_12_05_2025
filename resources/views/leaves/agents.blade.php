@@ -20,23 +20,6 @@
         </div>
     </div>
 
-    <!-- Success/Error Messages -->
-    @if(session('success'))
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
-            <i class="fas fa-check-circle me-2"></i>
-            {{ session('success') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-    @endif
-
-    @if(session('error'))
-        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-            <i class="fas fa-exclamation-circle me-2"></i>
-            {{ session('error') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-    @endif
-
     <!-- Filters -->
     <div class="card shadow-sm mb-4">
         <div class="card-body">
@@ -120,7 +103,7 @@
                                 </small>
                                 <div class="d-flex flex-wrap gap-2 align-items-center">
                                     @if($item->nbr_jours)
-                                        <span class="badge bg-info">{{ $item->nbr_jours }}j</span>
+                                        <span class="badge bg-primary">{{ $item->nbr_jours }}j</span>
                                     @endif
                                     @if($item->date_debut)
                                         <small><i class="fas fa-calendar me-1"></i>{{ \Carbon\Carbon::parse($item->date_debut)->format('d/m/Y') }}</small>
@@ -152,6 +135,14 @@
                                         <i class="fas fa-file-pdf"></i>
                                     </a>
                                 @endif
+                                @if($item->avis_depart_statut == 'pending' && isset($item->avis_depart_id) && $item->avis_depart_id)
+                                    <form action="{{ route('hr.leaves.validate-avis-depart', $item->avis_depart_id) }}" method="POST" class="d-inline" onsubmit="return confirm('Êtes-vous sûr de vouloir valider cet avis de départ?');">
+                                        @csrf
+                                        <button type="submit" class="btn btn-sm btn-success">
+                                            <i class="fas fa-check me-1"></i> Valider
+                                        </button>
+                                    </form>
+                                @endif
                             </div>
                         </div>
 
@@ -174,36 +165,46 @@
                                     @endif
                                 </div>
                             </div>
-                            <div class="d-flex align-items-center gap-2">
-                                @if($item->avis_retour_statut_label)
-                                    @php
-                                        $statut = $item->avis_retour_statut ?? 'pending';
-                                        $badgeClass = match($statut) {
-                                            'approved' => 'bg-success',
-                                            'pending' => 'bg-warning text-dark',
-                                            'rejected' => 'bg-danger',
-                                            'cancelled' => 'bg-secondary',
-                                            default => 'bg-secondary'
-                                        };
-                                    @endphp
-                                    <span class="badge {{ $badgeClass }}">{{ $item->avis_retour_statut_label }}</span>
-                                @endif
-                                @if($item->avis_retour_statut == 'approved' && isset($item->avis_retour_id) && $item->avis_retour_id)
-                                    @if(isset($item->avis_retour_pdf_path) && $item->avis_retour_pdf_path)
-                                        <a href="{{ route('hr.leaves.download-avis-retour-pdf', $item->avis_retour_id) }}" 
-                                           class="text-success" 
-                                           target="_blank"
-                                           title="Avis de Retour PDF">
-                                            <i class="fas fa-file-pdf"></i>
-                                        </a>
-                                    @elseif(isset($item->explanation_pdf_path) && $item->explanation_pdf_path)
-                                        <a href="{{ route('hr.leaves.download-explanation-pdf', $item->avis_retour_id) }}" 
-                                           class="text-danger" 
-                                           target="_blank"
-                                           title="Note d'Explication PDF">
-                                            <i class="fas fa-file-pdf"></i>
-                                        </a>
+                            <div class="d-flex flex-column gap-2">
+                                <div class="d-flex align-items-center gap-2">
+                                    @if($item->avis_retour_statut_label)
+                                        @php
+                                            $statut = $item->avis_retour_statut ?? 'pending';
+                                            $badgeClass = match($statut) {
+                                                'approved' => 'bg-success',
+                                                'pending' => 'bg-warning text-dark',
+                                                'rejected' => 'bg-danger',
+                                                'cancelled' => 'bg-secondary',
+                                                default => 'bg-secondary'
+                                            };
+                                        @endphp
+                                        <span class="badge {{ $badgeClass }}">{{ $item->avis_retour_statut_label }}</span>
                                     @endif
+                                    @if($item->avis_retour_statut == 'approved' && isset($item->avis_retour_id) && $item->avis_retour_id)
+                                        @if(isset($item->avis_retour_pdf_path) && $item->avis_retour_pdf_path)
+                                            <a href="{{ route('hr.leaves.download-avis-retour-pdf', $item->avis_retour_id) }}" 
+                                               class="text-success" 
+                                               target="_blank"
+                                               title="Avis de Retour PDF">
+                                                <i class="fas fa-file-pdf"></i>
+                                            </a>
+                                        @elseif(isset($item->explanation_pdf_path) && $item->explanation_pdf_path)
+                                            <a href="{{ route('hr.leaves.download-explanation-pdf', $item->avis_retour_id) }}" 
+                                               class="text-danger" 
+                                               target="_blank"
+                                               title="Note d'Explication PDF">
+                                                <i class="fas fa-file-pdf"></i>
+                                            </a>
+                                        @endif
+                                    @endif
+                                </div>
+                                @if($item->avis_retour_statut == 'pending' && isset($item->avis_retour_id) && $item->avis_retour_id)
+                                    <form action="{{ route('hr.leaves.validate-avis-retour', $item->avis_retour_id) }}" method="POST" class="d-inline" onsubmit="return confirm('Êtes-vous sûr de vouloir valider cet avis de retour?');">
+                                        @csrf
+                                        <button type="submit" class="btn btn-sm btn-success">
+                                            <i class="fas fa-check me-1"></i> Valider
+                                        </button>
+                                    </form>
                                 @endif
                             </div>
                         </div>
@@ -221,7 +222,7 @@
                                 </a>
                                 @if($item->statut == 'pending')
                                     <a href="{{ route('hr.leaves.show', $item->id) }}" 
-                                       class="btn btn-sm btn-secondary">
+                                       class="btn btn-sm btn-primary">
                                         <i class="fas fa-cog me-1"></i> Traiter
                                     </a>
                                 @else
@@ -466,6 +467,13 @@
                                            onclick="event.stopPropagation();">
                                             <i class="fas fa-file-pdf" style="font-size: 1.2rem;"></i>
                                         </a>
+                                    @elseif($item->avis_depart_statut == 'pending' && isset($item->avis_depart_id) && $item->avis_depart_id)
+                                        <form action="{{ route('hr.leaves.validate-avis-depart', $item->avis_depart_id) }}" method="POST" class="d-inline" onsubmit="return confirm('Êtes-vous sûr de vouloir valider cet avis de départ?');" onclick="event.stopPropagation();">
+                                            @csrf
+                                            <button type="submit" class="btn btn-sm btn-success" onclick="event.stopPropagation();">
+                                                <i class="fas fa-check me-1"></i> Valider
+                                            </button>
+                                        </form>
                                     @else
                                         <span style="color: #6c757d; pointer-events: none;">-</span>
                                     @endif
@@ -519,10 +527,9 @@
                                 <td class="text-center align-middle" style="padding: 10px;" onclick="event.stopPropagation();">
                                     @if($item->avis_retour_statut == 'approved' && isset($item->avis_retour_id) && $item->avis_retour_id)
                                         @if(isset($item->avis_retour_pdf_path) && $item->avis_retour_pdf_path)
-                                            <a href="{{ route('hr.leaves.download-avis-retour-pdf', $item->avis_retour_id) }}" 
+                                            <a href="{{ route('hr.leaves.view-avis-retour-pdf', $item->avis_retour_id) }}" 
                                                class="text-success" 
-                                               target="_blank"
-                                               title="Avis de Retour PDF"
+                                               title="Voir Avis de Retour PDF avec Solde"
                                                onclick="event.stopPropagation();">
                                                 <i class="fas fa-file-pdf" style="font-size: 1.2rem;"></i>
                                             </a>

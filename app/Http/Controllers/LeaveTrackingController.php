@@ -22,61 +22,19 @@ class LeaveTrackingController extends Controller
         $perPage = $request->get('per_page', 10);
         $search = $request->get('search', '');
         
-        // Check if user is a chef
+        // Check if user is a chef (for display purposes only)
         $isChef = Entite::where('chef_ppr', $user->ppr)->exists();
         
-        // Get leave requests: user's own demandes OR demandes from users in entities where user is chef
-        $query = Demande::with(['avis.avisDepart', 'avis.avisRetour', 'user']);
-        
-        if ($isChef || $user->hasRole('admin')) {
-            // Get entities where user is chef
-            $chefEntiteIds = Entite::where('chef_ppr', $user->ppr)
-                ->pluck('id');
-            
-            // Get PPRs of users in these entities
-            $userPprs = Parcours::whereIn('entite_id', $chefEntiteIds)
-                ->where(function($query) {
-                    $query->whereNull('date_fin')
-                          ->orWhere('date_fin', '>=', now());
-                })
-                ->pluck('ppr')
-                ->unique()
-                ->toArray();
-            
-            // Include user's own demandes
-            $userPprs[] = $user->ppr;
-            
-            $query->whereIn('ppr', $userPprs);
-        } else {
-            // Regular user: only their own demandes
-            $query->where('ppr', $user->ppr);
-        }
+        // Personal tracking page: always show only the logged-in user's own demandes
+        // Chefs can see their collaborators' demandes on the "Suivi de demandes de mes agents" page
+        $query = Demande::with(['avis.avisDepart', 'avis.avisRetour', 'user'])
+            ->where('ppr', $user->ppr);
         
         // Get all demandes (for frontend filtering) - limit to last 10 years
         $allDemandesQuery = Demande::with(['avis.avisDepart', 'avis.avisRetour', 'user'])
+            ->where('ppr', $user->ppr)
             ->whereYear('created_at', '>=', date('Y') - 10)
             ->orderBy('created_at', 'desc');
-        
-        // Apply same user/chef filtering
-        if ($isChef || $user->hasRole('admin')) {
-            $chefEntiteIds = Entite::where('chef_ppr', $user->ppr)
-                ->pluck('id');
-            
-            $userPprs = Parcours::whereIn('entite_id', $chefEntiteIds)
-                ->where(function($query) {
-                    $query->whereNull('date_fin')
-                          ->orWhere('date_fin', '>=', now());
-                })
-                ->pluck('ppr')
-                ->unique()
-                ->toArray();
-            
-            $userPprs[] = $user->ppr;
-            
-            $allDemandesQuery->whereIn('ppr', $userPprs);
-        } else {
-            $allDemandesQuery->where('ppr', $user->ppr);
-        }
         
         $allDemandes = $allDemandesQuery->get();
         

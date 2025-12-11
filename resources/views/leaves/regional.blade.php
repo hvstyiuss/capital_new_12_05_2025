@@ -218,7 +218,7 @@
                                 </a>
                                 @if($item->statut == 'pending')
                                     <a href="{{ route('hr.leaves.show', $item->id) }}" 
-                                       class="btn btn-sm btn-secondary">
+                                       class="btn btn-sm btn-primary">
                                         <i class="fas fa-cog me-1"></i> Traiter
                                     </a>
                                 @else

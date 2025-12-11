@@ -12,7 +12,23 @@
     </div>
 
     <!-- Alert Message - Fixed Position -->
-    <div class="alert alert-warning alert-dismissible fade show mb-4" id="leaveInfoAlert" style="position: sticky; top: 0; z-index: 1000;">
+    <script>
+    // Check localStorage immediately to prevent alert flash
+    (function() {
+        try {
+            if (typeof Storage !== 'undefined' && localStorage.getItem('leave-info-alert') === 'dismissed') {
+                // Inject style to hide alert before it renders
+                var style = document.createElement('style');
+                style.id = 'hideLeaveInfoAlert';
+                style.textContent = '#leaveInfoAlert { display: none !important; }';
+                (document.head || document.getElementsByTagName('head')[0]).appendChild(style);
+            }
+        } catch(e) {
+            // If localStorage is not available, continue normally
+        }
+    })();
+    </script>
+    <div class="alert alert-warning alert-dismissible show mb-4" id="leaveInfoAlert" data-no-auto-hide="true" data-alert-key="leave-info-alert" style="position: sticky; top: 0; z-index: 1000;">
         <div class="d-flex align-items-start">
             <i class="fas fa-exclamation-triangle me-3 mt-1" style="font-size: 1.2rem;"></i>
             <div class="flex-grow-1">
@@ -64,7 +80,7 @@
     </div>
 
     <!-- Demandes Cards View -->
-    <div class="row g-3" id="demandesCardsContainer">
+    <div class="row g-3" id="demandesCardsContainer" style="display: none;">
         @forelse($items as $index => $demande)
         <div class="col-12">
             <div class="card shadow-sm border-left-4" style="border-left-color: {{ isset($demande['statut']) && (strtolower($demande['statut']) == 'rejeté' || strtolower($demande['statut']) == 'rejected') ? '#dc3545' : (isset($demande['statut']) && (strtolower($demande['statut']) == 'approuvé' || strtolower($demande['statut']) == 'approved' || strtolower($demande['statut']) == 'validé') ? '#28a745' : '#ffc107') }};">
@@ -166,21 +182,27 @@
                                     <span class="badge {{ $badgeClass }}">{{ $demande['avis_retour']['statut'] ?? '-' }}</span>
                                 @endif
                                 @if(isset($demande['avis_retour']['statut_raw']) && $demande['avis_retour']['statut_raw'] == 'approved' && isset($demande['avis_retour']['id']) && $demande['avis_retour']['id'])
-                                    @if(isset($demande['avis_retour']['pdf_path']) && $demande['avis_retour']['pdf_path'])
-                                        <a href="{{ route('hr.leaves.download-avis-retour-pdf', $demande['avis_retour']['id']) }}" 
-                                           class="text-success" 
-                                           target="_blank"
-                                           title="Avis de Retour PDF">
-                                            <i class="fas fa-file-pdf"></i>
-                                        </a>
-                                    @elseif(isset($demande['avis_retour']['explanation_pdf_path']) && $demande['avis_retour']['explanation_pdf_path'])
+                                    <a href="{{ route('hr.leaves.download-avis-retour-pdf', $demande['avis_retour']['id']) }}" 
+                                       class="text-success" 
+                                       target="_blank"
+                                       title="Avis de Retour PDF - Sera généré si non existant">
+                                        <i class="fas fa-file-pdf"></i>
+                                    </a>
+                                    @if((isset($demande['avis_retour']['explanation_pdf_path']) && $demande['avis_retour']['explanation_pdf_path']) || 
+                                        (isset($demande['avis_retour']['date_retour_declaree']) && isset($demande['avis_retour']['date_retour_effectif']) && 
+                                         \Carbon\Carbon::parse($demande['avis_retour']['date_retour_effectif'])->greaterThan(\Carbon\Carbon::parse($demande['avis_retour']['date_retour_declaree']))))
                                         <a href="{{ route('hr.leaves.download-explanation-pdf', $demande['avis_retour']['id']) }}" 
                                            class="text-danger" 
                                            target="_blank"
-                                           title="Note d'Explication PDF">
+                                           title="Note d'Explication PDF{{ !isset($demande['avis_retour']['explanation_pdf_path']) || !$demande['avis_retour']['explanation_pdf_path'] ? ' - Sera généré automatiquement' : '' }}">
                                             <i class="fas fa-file-pdf"></i>
                                         </a>
                                     @endif
+                                @endif
+                                @if(!isset($demande['avis_retour']['statut_raw']) && isset($demande['avis_depart']['statut']) && $demande['avis_depart']['statut'] == 'approved')
+                                    <a href="{{ route('hr.leaves.declare-retour') }}" class="btn btn-sm btn-success">
+                                        <i class="fas fa-arrow-right me-1"></i>Avis de Retour Maintenant
+                                    </a>
                                 @endif
                             </div>
                         </div>
@@ -189,28 +211,27 @@
                         <div class="col-md-2 text-end">
                             <div class="d-flex flex-column gap-2 align-items-end">
                                 @if(isset($demande['avis_depart']['statut']) && $demande['avis_depart']['statut'] == 'approved' && isset($demande['avis_depart']['id']) && $demande['avis_depart']['id'])
-                                    @if(isset($demande['avis_depart']['pdf_path']) && $demande['avis_depart']['pdf_path'])
-                                        <a href="{{ route('hr.leaves.download-avis-depart-pdf', $demande['avis_depart']['id']) }}" 
-                                           class="btn btn-sm btn-outline-danger" 
-                                           target="_blank"
-                                           title="Avis de Départ PDF">
-                                            <i class="fas fa-file-pdf me-1"></i> PDF Départ
-                                        </a>
-                                    @endif
+                                    <a href="{{ route('hr.leaves.view-avis-depart-pdf', $demande['avis_depart']['id']) }}" 
+                                       class="btn btn-sm btn-outline-danger" 
+                                       target="_blank"
+                                       title="Voir Avis de Départ PDF avec Solde - Sera généré si non existant">
+                                        <i class="fas fa-file-pdf me-1"></i> PDF Départ
+                                    </a>
                                 @endif
                                 @if(isset($demande['avis_retour']['statut_raw']) && $demande['avis_retour']['statut_raw'] == 'approved' && isset($demande['avis_retour']['id']) && $demande['avis_retour']['id'])
-                                    @if(isset($demande['avis_retour']['pdf_path']) && $demande['avis_retour']['pdf_path'])
-                                        <a href="{{ route('hr.leaves.download-avis-retour-pdf', $demande['avis_retour']['id']) }}" 
-                                           class="btn btn-sm btn-outline-success" 
-                                           target="_blank"
-                                           title="Avis de Retour PDF">
-                                            <i class="fas fa-file-pdf me-1"></i> PDF Retour
-                                        </a>
-                                    @elseif(isset($demande['avis_retour']['explanation_pdf_path']) && $demande['avis_retour']['explanation_pdf_path'])
+                                    <a href="{{ route('hr.leaves.download-avis-retour-pdf', $demande['avis_retour']['id']) }}" 
+                                       class="btn btn-sm btn-outline-success" 
+                                       target="_blank"
+                                       title="Avis de Retour PDF - Sera généré si non existant">
+                                        <i class="fas fa-file-pdf me-1"></i> PDF Retour
+                                    </a>
+                                    @if((isset($demande['avis_retour']['explanation_pdf_path']) && $demande['avis_retour']['explanation_pdf_path']) || 
+                                        (isset($demande['avis_retour']['date_retour_declaree']) && isset($demande['avis_retour']['date_retour_effectif']) && 
+                                         \Carbon\Carbon::parse($demande['avis_retour']['date_retour_effectif'])->greaterThan(\Carbon\Carbon::parse($demande['avis_retour']['date_retour_declaree']))))
                                         <a href="{{ route('hr.leaves.download-explanation-pdf', $demande['avis_retour']['id']) }}" 
                                            class="btn btn-sm btn-outline-danger" 
                                            target="_blank"
-                                           title="Note d'Explication PDF">
+                                           title="Note d'Explication PDF{{ !isset($demande['avis_retour']['explanation_pdf_path']) || !$demande['avis_retour']['explanation_pdf_path'] ? ' - Sera généré automatiquement' : '' }}">
                                             <i class="fas fa-file-pdf me-1"></i> PDF Explication
                                         </a>
                                     @endif
@@ -245,10 +266,10 @@
                             <th colspan="4" class="text-center align-middle" style="background-color: #e9ecef; color: #495057; font-weight: 600; padding: 12px;">
                                 Données Demande
                             </th>
-                            <th colspan="5" class="text-center align-middle" style="background-color:rgb(99, 163, 114); color: #495057; font-weight: 600; padding: 12px;">
+                            <th colspan="4" class="text-center align-middle" style="background-color:rgb(99, 163, 114); color: #495057; font-weight: 600; padding: 12px;">
                                 Avis de Départ
                             </th>
-                            <th colspan="6" class="text-center align-middle" style="background-color:rgb(238, 181, 135); color: #495057; font-weight: 600; padding: 12px;">
+                            <th colspan="5" class="text-center align-middle" style="background-color:rgb(238, 181, 135); color: #495057; font-weight: 600; padding: 12px;">
                                 Avis de Retour
                             </th>
                             <th colspan="2" class="text-center align-middle" style="background-color: #e9ecef; color: #495057; font-weight: 600; padding: 12px;">
@@ -308,9 +329,6 @@
                                     <i class="fas fa-sort-down" style="opacity: 0.5; margin-top: -5px;"></i>
                                 </span>
                             </th>
-                            <th class="text-center align-middle" style="background-color: #f8f9fa; min-width: 80px; padding: 10px;">
-                                PDF
-                            </th>
                             <!-- Avis de Retour -->
                             <th class="text-center align-middle" style="background-color: #f8f9fa; min-width: 150px; padding: 10px; position: relative;">
                                 Date Depot
@@ -346,9 +364,6 @@
                                     <i class="fas fa-sort-up" style="opacity: 0.5;"></i><br>
                                     <i class="fas fa-sort-down" style="opacity: 0.5; margin-top: -5px;"></i>
                                 </span>
-                            </th>
-                            <th class="text-center align-middle" style="background-color: #f8f9fa; min-width: 80px; padding: 10px;">
-                                PDF
                             </th>
                             <!-- Impression -->
                             <th class="text-center align-middle" style="background-color: #f8f9fa; min-width: 80px; padding: 10px;">
@@ -408,23 +423,6 @@
                                     <span style="color: #6c757d; pointer-events: none;">-</span>
                                 @endif
                             </td>
-                            <td class="text-center align-middle" style="padding: 10px;" onclick="event.stopPropagation();">
-                                @if(isset($demande['avis_depart']['statut']) && $demande['avis_depart']['statut'] == 'approved' && isset($demande['avis_depart']['id']) && $demande['avis_depart']['id'])
-                                    @if(isset($demande['avis_depart']['pdf_path']) && $demande['avis_depart']['pdf_path'])
-                                        <a href="{{ route('hr.leaves.download-avis-depart-pdf', $demande['avis_depart']['id']) }}" 
-                                           class="text-danger" 
-                                           target="_blank"
-                                           title="Avis de Départ PDF"
-                                           onclick="event.stopPropagation();">
-                                            <i class="fas fa-file-pdf" style="font-size: 1.2rem;"></i>
-                                        </a>
-                                    @else
-                                        <span style="color: #6c757d; pointer-events: none;">-</span>
-                                    @endif
-                                @else
-                                    <span style="color: #6c757d; pointer-events: none;">-</span>
-                                @endif
-                            </td>
                             <!-- Avis de Retour -->
                             <td class="text-center align-middle" style="padding: 10px;">
                                 @if(isset($demande['avis_retour']['date_depot']))
@@ -471,70 +469,27 @@
                                     <span style="color: #6c757d; pointer-events: none;">-</span>
                                 @endif
                             </td>
-                            <td class="text-center align-middle" style="padding: 10px;" onclick="event.stopPropagation();">
-                                @if(isset($demande['avis_retour']['statut_raw']) && $demande['avis_retour']['statut_raw'] == 'approved' && isset($demande['avis_retour']['id']) && $demande['avis_retour']['id'])
-                                    @if(isset($demande['avis_retour']['pdf_path']) && $demande['avis_retour']['pdf_path'])
-                                        <a href="{{ route('hr.leaves.download-avis-retour-pdf', $demande['avis_retour']['id']) }}" 
-                                           class="text-success" 
-                                           target="_blank"
-                                           title="Avis de Retour PDF"
-                                           onclick="event.stopPropagation();">
-                                            <i class="fas fa-file-pdf" style="font-size: 1.2rem;"></i>
-                                        </a>
-                                    @elseif(isset($demande['avis_retour']['explanation_pdf_path']) && $demande['avis_retour']['explanation_pdf_path'])
-                                        <a href="{{ route('hr.leaves.download-explanation-pdf', $demande['avis_retour']['id']) }}" 
-                                           class="text-danger" 
-                                           target="_blank"
-                                           title="Note d'Explication PDF"
-                                           onclick="event.stopPropagation();">
-                                            <i class="fas fa-file-pdf" style="font-size: 1.2rem;"></i>
-                                        </a>
-                                    @else
-                                        <span style="color: #6c757d; pointer-events: none;">-</span>
-                                    @endif
-                                @else
-                                    <span style="color: #6c757d; pointer-events: none;">-</span>
-                                @endif
-                            </td>
                             <!-- Impression -->
                             <td class="text-center align-middle" style="padding: 10px;" onclick="event.stopPropagation();">
-                                @if(isset($demande['avis_depart']['statut']) && $demande['avis_depart']['statut'] == 'approved' && isset($demande['avis_depart']['id']) && $demande['avis_depart']['id'])
-                                    @if(isset($demande['avis_depart']['pdf_path']) && $demande['avis_depart']['pdf_path'])
-                                        <a href="{{ route('hr.leaves.download-avis-depart-pdf', $demande['avis_depart']['id']) }}" 
-                                           class="text-danger" 
-                                           target="_blank"
-                                           title="Avis de Départ PDF"
-                                           onclick="event.stopPropagation();">
-                                            <i class="fas fa-file-pdf" style="font-size: 1.2rem;"></i>
-                                        </a>
-                                    @else
-                                        <span style="color: #6c757d; pointer-events: none;">-</span>
-                                    @endif
+                                @if(isset($demande['avis_depart']) && isset($demande['avis_depart']['id']) && $demande['avis_depart']['id'] && isset($demande['avis_depart']['statut']) && ($demande['avis_depart']['statut'] == 'approved' || $demande['avis_depart']['statut'] == 'Validé'))
+                                    <a href="{{ route('hr.leaves.view-avis-depart-pdf', $demande['avis_depart']['id']) }}" 
+                                       class="text-danger" 
+                                       title="Voir Avis de Départ PDF avec Solde"
+                                       onclick="event.stopPropagation();">
+                                        <i class="fas fa-file-pdf" style="font-size: 1.2rem;"></i>
+                                    </a>
                                 @else
                                     <span style="color: #6c757d; pointer-events: none;">-</span>
                                 @endif
                             </td>
                             <td class="text-center align-middle" style="padding: 10px;" onclick="event.stopPropagation();">
-                                @if(isset($demande['avis_retour']['statut_raw']) && $demande['avis_retour']['statut_raw'] == 'approved' && isset($demande['avis_retour']['id']) && $demande['avis_retour']['id'])
-                                    @if(isset($demande['avis_retour']['pdf_path']) && $demande['avis_retour']['pdf_path'])
-                                        <a href="{{ route('hr.leaves.download-avis-retour-pdf', $demande['avis_retour']['id']) }}" 
-                                           class="text-success" 
-                                           target="_blank"
-                                           title="Avis de Retour PDF"
-                                           onclick="event.stopPropagation();">
-                                            <i class="fas fa-file-pdf" style="font-size: 1.2rem;"></i>
-                                        </a>
-                                    @elseif(isset($demande['avis_retour']['explanation_pdf_path']) && $demande['avis_retour']['explanation_pdf_path'])
-                                        <a href="{{ route('hr.leaves.download-explanation-pdf', $demande['avis_retour']['id']) }}" 
-                                           class="text-danger" 
-                                           target="_blank"
-                                           title="Note d'Explication PDF"
-                                           onclick="event.stopPropagation();">
-                                            <i class="fas fa-file-pdf" style="font-size: 1.2rem;"></i>
-                                        </a>
-                                    @else
-                                        <span style="color: #6c757d; pointer-events: none;">-</span>
-                                    @endif
+                                @if(isset($demande['avis_retour']) && isset($demande['avis_retour']['id']) && $demande['avis_retour']['id'] && isset($demande['avis_retour']['statut_raw']) && $demande['avis_retour']['statut_raw'] == 'approved')
+                                    <a href="{{ route('hr.leaves.view-avis-retour-pdf', $demande['avis_retour']['id']) }}" 
+                                       class="text-success" 
+                                       title="Voir Avis de Retour PDF avec Solde"
+                                       onclick="event.stopPropagation();">
+                                        <i class="fas fa-file-pdf" style="font-size: 1.2rem;"></i>
+                                    </a>
                                 @else
                                     <span style="color: #6c757d; pointer-events: none;">-</span>
                                 @endif
@@ -542,7 +497,7 @@
                         </tr>
                         @empty
                         <tr>
-                            <td colspan="17" class="text-center py-4">
+                            <td colspan="15" class="text-center py-4">
                                 <i class="fas fa-inbox text-muted" style="font-size: 2rem;"></i>
                                 <p class="text-muted mt-2 mb-0">Aucune demande de congé trouvée</p>
                             </td>
@@ -723,30 +678,44 @@
 @push('scripts')
 <script>
 function toggleView() {
-    const cardsView = document.querySelector('.row.g-3');
+    const cardsContainer = document.getElementById('demandesCardsContainer');
     const tableView = document.getElementById('tableView');
     const toggleBtn = document.getElementById('toggleViewBtn');
     
-    if (cardsView && tableView && toggleBtn) {
-        if (cardsView.classList.contains('d-none')) {
-            // Switch to cards view
-            cardsView.classList.remove('d-none');
-            tableView.classList.add('d-none');
-            toggleBtn.innerHTML = '<i class="fas fa-table me-1"></i> Vue Tableau';
-        } else {
+    if (cardsContainer && tableView && toggleBtn) {
+        const isCardsVisible = cardsContainer.style.display !== 'none' && !cardsContainer.classList.contains('d-none');
+        
+        if (isCardsVisible) {
             // Switch to table view
-            cardsView.classList.add('d-none');
+            cardsContainer.style.display = 'none';
+            cardsContainer.classList.add('d-none');
+            tableView.style.display = '';
             tableView.classList.remove('d-none');
             toggleBtn.innerHTML = '<i class="fas fa-th-large me-1"></i> Vue Cartes';
+        } else {
+            // Switch to cards view
+            cardsContainer.style.display = '';
+            cardsContainer.classList.remove('d-none');
+            tableView.style.display = 'none';
+            tableView.classList.add('d-none');
+            toggleBtn.innerHTML = '<i class="fas fa-table me-1"></i> Vue Tableau';
         }
     }
 }
 </script>
 <script>
-// Frontend filtering - store all demandes data
-const allDemandesData = @json($allDemandesData ?? []);
-let currentPage = 1;
-let searchTimeout;
+(function() {
+    // Frontend filtering - store all demandes data
+    // Use window object to prevent redeclaration errors when script runs multiple times
+    if (typeof window.trackingAllDemandesData === 'undefined') {
+        window.trackingAllDemandesData = @json($allDemandesData ?? []);
+        window.trackingCurrentPage = 1;
+        window.trackingSearchTimeout = null;
+    }
+    // Create local references
+    const allDemandesData = window.trackingAllDemandesData;
+    let currentPage = window.trackingCurrentPage;
+    let searchTimeout = window.trackingSearchTimeout;
 
 // Filter and paginate demandes on frontend
 function filterAndPaginateDemandes() {
@@ -798,6 +767,27 @@ function renderDemandes(demandes, total, startIndex, endIndex, currentPage, tota
     const cardsContainer = document.getElementById('demandesCardsContainer');
     const tableContainer = document.getElementById('demandesTableContainer');
     
+    // Show containers after rendering - default to table view
+    // Hide cards view by default
+    if (cardsContainer) {
+        cardsContainer.style.display = 'none';
+        cardsContainer.classList.add('d-none');
+    }
+    
+    // Show table view by default
+    const tableView = document.getElementById('tableView');
+    if (tableView) {
+        tableView.removeAttribute('style');
+        tableView.style.display = 'block';
+        tableView.classList.remove('d-none');
+    }
+    
+    // Update toggle button text to reflect table view is active
+    const toggleBtn = document.getElementById('toggleViewBtn');
+    if (toggleBtn) {
+        toggleBtn.innerHTML = '<i class="fas fa-th-large me-1"></i> Vue Cartes';
+    }
+    
     if (demandes.length === 0) {
         const emptyHtml = `
             <div class="col-12">
@@ -809,7 +799,11 @@ function renderDemandes(demandes, total, startIndex, endIndex, currentPage, tota
                 </div>
             </div>
         `;
-        if (cardsContainer) cardsContainer.innerHTML = emptyHtml;
+        if (cardsContainer) {
+            cardsContainer.innerHTML = emptyHtml;
+            cardsContainer.style.display = 'none'; // Hide cards (table is default)
+            cardsContainer.classList.add('d-none');
+        }
         if (tableContainer) {
             tableContainer.innerHTML = `
                 <div class="card-body text-center py-5">
@@ -817,6 +811,19 @@ function renderDemandes(demandes, total, startIndex, endIndex, currentPage, tota
                     <p class="text-muted mb-0">Aucune demande de congé trouvée</p>
                 </div>
             `;
+        }
+        // Show tableView if it exists (default view)
+        const tableView = document.getElementById('tableView');
+        if (tableView) {
+            tableView.removeAttribute('style');
+            tableView.style.display = 'block';
+            tableView.classList.remove('d-none');
+        }
+        
+        // Update toggle button text
+        const toggleBtn = document.getElementById('toggleViewBtn');
+        if (toggleBtn) {
+            toggleBtn.innerHTML = '<i class="fas fa-th-large me-1"></i> Vue Cartes';
         }
         renderPagination(total, startIndex, endIndex, currentPage, totalPages);
         return;
@@ -916,7 +923,7 @@ function renderDemandes(demandes, total, startIndex, endIndex, currentPage, tota
         let actionsHtml = '';
         if (demande.is_own && demande.avis_depart && demande.avis_depart.statut === 'pending') {
             actionsHtml = `
-                <form action="/leaves/${demande.id}" method="POST" class="d-inline" onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer cette demande?');">
+                <form action="{{ url('hr/leaves') }}/${demande.id}" method="POST" class="d-inline" onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer cette demande?');">
                     <input type="hidden" name="_token" value="{{ csrf_token() }}">
                     <input type="hidden" name="_method" value="DELETE">
                     <button type="submit" class="btn btn-sm btn-danger">
@@ -928,25 +935,43 @@ function renderDemandes(demandes, total, startIndex, endIndex, currentPage, tota
         
         // PDF buttons
         let pdfButtonsHtml = '';
-        if (demande.avis_depart && demande.avis_depart.pdf_path) {
+        if (demande.avis_depart && demande.avis_depart.statut === 'approved' && demande.avis_depart.id) {
             pdfButtonsHtml += `
-                <a href="/leaves/avis-depart/${demande.avis_depart.id}/download-pdf" 
-                   class="btn btn-sm btn-outline-primary" 
-                   target="_blank"
-                   title="Avis de Départ PDF">
+                <a href="{{ url('hr/leaves/avis-depart') }}/${demande.avis_depart.id}/view-pdf" 
+                   class="btn btn-sm btn-outline-danger" 
+                   title="Voir Avis de Départ PDF avec Solde">
                     <i class="fas fa-file-pdf me-1"></i> PDF Départ
                 </a>
             `;
         }
-        if (demande.avis_retour && demande.avis_retour.statut_raw == 'approved' && demande.avis_retour.pdf_path) {
-            pdfButtonsHtml += `
-                <a href="/leaves/avis-retour/${demande.avis_retour.id}/download-pdf" 
-                   class="btn btn-sm btn-outline-success" 
-                   target="_blank"
-                   title="Avis de Retour PDF">
-                    <i class="fas fa-file-pdf me-1"></i> PDF Retour
-                </a>
-            `;
+        if (demande.avis_retour && demande.avis_retour.statut_raw == 'approved' && demande.avis_retour.id) {
+            // Check if explanation PDF exists or if actual return date exceeds declared return date
+            const hasExplanationPdf = demande.avis_retour.explanation_pdf_path && demande.avis_retour.explanation_pdf_path !== '';
+            const needsExplanation = demande.avis_retour.date_retour_declaree && demande.avis_retour.date_retour_effectif &&
+                new Date(demande.avis_retour.date_retour_effectif) > new Date(demande.avis_retour.date_retour_declaree);
+            
+            if (hasExplanationPdf || needsExplanation) {
+                pdfButtonsHtml += `
+                    <a href="{{ url('hr/leaves/avis-retour') }}/${demande.avis_retour.id}/download-explanation-pdf" 
+                       class="btn btn-sm btn-outline-danger" 
+                       target="_blank"
+                       title="${hasExplanationPdf ? 'Note d\'Explication PDF' : 'Note d\'Explication PDF - Sera généré automatiquement'}">
+                        <i class="fas fa-file-pdf me-1"></i> PDF Explication
+                    </a>
+                `;
+            }
+            
+            // Always show avis retour PDF button if approved (will generate if needed)
+            if (demande.avis_retour && demande.avis_retour.statut_raw == 'approved' && demande.avis_retour.id) {
+                pdfButtonsHtml += `
+                    <a href="{{ url('hr/leaves/download-avis-retour-pdf') }}/${demande.avis_retour.id}" 
+                       class="btn btn-sm btn-outline-success" 
+                       target="_blank"
+                       title="Avis de Retour PDF - Sera généré si non existant">
+                        <i class="fas fa-file-pdf me-1"></i> PDF Retour
+                    </a>
+                `;
+            }
         }
         
         cardsHtml += `
@@ -968,7 +993,9 @@ function renderDemandes(demandes, total, startIndex, endIndex, currentPage, tota
                                 ${avisDepartHtml}
                             </div>
                             <div class="col-md-3 px-3">
-                                ${avisRetourHtml || '<div class="text-muted small">Aucun avis de retour</div>'}
+                                ${avisRetourHtml || (demande.avis_depart && demande.avis_depart.statut === 'approved' ? 
+                                    '<a href="{{ route("hr.leaves.declare-retour") }}" class="btn btn-sm btn-success"><i class="fas fa-arrow-right me-1"></i>Avis de Retour Maintenant</a>' : 
+                                    '<div class="text-muted small">Aucun avis de retour</div>')}
                             </div>
                             <div class="col-md-2 text-end">
                                 <div class="d-flex flex-column gap-2 align-items-end">
@@ -986,10 +1013,149 @@ function renderDemandes(demandes, total, startIndex, endIndex, currentPage, tota
     
     if (cardsContainer) cardsContainer.innerHTML = cardsHtml;
     
-    // Render table (simplified - you can expand this if needed)
+    // Render table rows
     if (tableContainer) {
-        // Table rendering can be added here if needed
-        // For now, we'll keep the server-rendered table structure
+        const tbody = tableContainer.querySelector('tbody');
+        if (tbody) {
+            let tableRowsHtml = '';
+            
+            demandes.forEach(function(demande) {
+                const dateDepot = new Date(demande.date_depot);
+                const dateDepotFormatted = dateDepot.toLocaleDateString('fr-FR', { 
+                    year: 'numeric', 
+                    month: '2-digit', 
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                }).replace(',', '');
+                
+                const dateDepart = demande.date_depart ? 
+                    new Date(demande.date_depart).toLocaleDateString('fr-FR', { year: 'numeric', month: '2-digit', day: '2-digit' }) : 
+                    '<span style="color: #6c757d;">-</span>';
+                
+                const dateRetour = demande.date_retour ? 
+                    new Date(demande.date_retour).toLocaleDateString('fr-FR', { year: 'numeric', month: '2-digit', day: '2-digit' }) : 
+                    '<span style="color: #6c757d;">-</span>';
+                
+                // Avis de Départ statut
+                let avisDepartStatutHtml = '<span style="color: #6c757d; pointer-events: none;">-</span>';
+                if (demande.avis_depart && demande.avis_depart.statut) {
+                    const statut = demande.avis_depart.statut;
+                    const statutMap = {
+                        'pending': 'En attente',
+                        'approved': 'Validé',
+                        'rejected': 'Rejeté',
+                        'cancelled': 'Annulé',
+                    };
+                    const badgeClass = statut === 'approved' ? 'bg-success' : 
+                                      statut === 'pending' ? 'bg-warning text-dark' : 
+                                      statut === 'rejected' ? 'bg-danger' : 'bg-secondary';
+                    const statutLabel = statutMap[statut] || statut;
+                    avisDepartStatutHtml = `<span class="badge ${badgeClass}" style="pointer-events: none;">${statutLabel}</span>`;
+                }
+                
+                // Avis de Retour data
+                const avisRetourDateDepot = demande.avis_retour && demande.avis_retour.date_depot ? 
+                    new Date(demande.avis_retour.date_depot).toLocaleDateString('fr-FR', { 
+                        year: 'numeric', 
+                        month: '2-digit', 
+                        day: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    }).replace(',', '') : 
+                    '<span style="color: #6c757d;">-</span>';
+                
+                const avisRetourNbrJours = demande.avis_retour && demande.avis_retour.nbr_jours_consommes !== undefined ? 
+                    demande.avis_retour.nbr_jours_consommes + 'j' : 
+                    '<span style="color: #6c757d;">-</span>';
+                
+                const avisRetourDateDeclaree = demande.avis_retour && demande.avis_retour.date_retour_declaree ? 
+                    new Date(demande.avis_retour.date_retour_declaree).toLocaleDateString('fr-FR', { year: 'numeric', month: '2-digit', day: '2-digit' }) : 
+                    '<span style="color: #6c757d;">-</span>';
+                
+                const avisRetourDateEffectif = demande.avis_retour && demande.avis_retour.date_retour_effectif ? 
+                    new Date(demande.avis_retour.date_retour_effectif).toLocaleDateString('fr-FR', { year: 'numeric', month: '2-digit', day: '2-digit' }) : 
+                    '<span style="color: #6c757d;">-</span>';
+                
+                // Avis de Retour statut
+                let avisRetourStatutHtml = '<span style="color: #6c757d; pointer-events: none;">-</span>';
+                if (demande.avis_retour && demande.avis_retour.statut_raw) {
+                    const statut = demande.avis_retour.statut_raw;
+                    const statutMap = {
+                        'pending': 'En attente',
+                        'approved': 'Validé',
+                        'rejected': 'Rejeté',
+                        'cancelled': 'Annulé',
+                    };
+                    const badgeClass = statut === 'approved' ? 'bg-success' : 
+                                      statut === 'pending' ? 'bg-warning text-dark' : 
+                                      statut === 'rejected' ? 'bg-danger' : 'bg-secondary';
+                    const statutLabel = statutMap[statut] || statut;
+                    avisRetourStatutHtml = `<span class="badge ${badgeClass}" style="pointer-events: none;">${statutLabel}</span>`;
+                }
+                
+                // PDF buttons
+                let avisDepartPdfHtml = '<span style="color: #6c757d; pointer-events: none;">-</span>';
+                if (demande.avis_depart && demande.avis_depart.statut === 'approved' && demande.avis_depart.id) {
+                    avisDepartPdfHtml = `
+                        <a href="{{ url('hr/leaves/avis-depart') }}/${demande.avis_depart.id}/view-pdf" 
+                           class="text-danger" 
+                           title="Voir Avis de Départ PDF avec Solde"
+                           onclick="event.stopPropagation();">
+                            <i class="fas fa-file-pdf" style="font-size: 1.2rem;"></i>
+                        </a>
+                    `;
+                }
+                
+                let avisRetourPdfHtml = '<span style="color: #6c757d; pointer-events: none;">-</span>';
+                if (demande.avis_retour && demande.avis_retour.statut_raw === 'approved' && demande.avis_retour.id) {
+                    avisRetourPdfHtml = `
+                        <a href="{{ url('hr/leaves/avis-retour') }}/${demande.avis_retour.id}/view-pdf" 
+                           class="text-success" 
+                           title="Voir Avis de Retour PDF avec Solde"
+                           onclick="event.stopPropagation();">
+                            <i class="fas fa-file-pdf" style="font-size: 1.2rem;"></i>
+                        </a>
+                    `;
+                }
+                
+                tableRowsHtml += `
+                    <tr>
+                        <!-- Données Demande -->
+                        <td class="text-center align-middle" style="padding: 10px;">${demande.id}</td>
+                        <td class="text-center align-middle" style="padding: 10px;">${demande.type}</td>
+                        <td class="text-center align-middle" style="padding: 10px;">${dateDepotFormatted}</td>
+                        <td class="text-center align-middle" style="padding: 10px;">${demande.nbr_jours}j</td>
+                        <!-- Avis de Départ -->
+                        <td class="text-center align-middle" style="padding: 10px;">${dateDepart}</td>
+                        <td class="text-center align-middle" style="padding: 10px;">${dateRetour}</td>
+                        <td class="text-center align-middle" style="padding: 10px;" onclick="event.stopPropagation();">${avisDepartStatutHtml}</td>
+                        <!-- Avis de Retour -->
+                        <td class="text-center align-middle" style="padding: 10px;">${avisRetourDateDepot}</td>
+                        <td class="text-center align-middle" style="padding: 10px;">${avisRetourNbrJours}</td>
+                        <td class="text-center align-middle" style="padding: 10px;">${avisRetourDateDeclaree}</td>
+                        <td class="text-center align-middle" style="padding: 10px;">${avisRetourDateEffectif}</td>
+                        <td class="text-center align-middle" style="padding: 10px;" onclick="event.stopPropagation();">${avisRetourStatutHtml}</td>
+                        <!-- Impression -->
+                        <td class="text-center align-middle" style="padding: 10px;" onclick="event.stopPropagation();">${avisDepartPdfHtml}</td>
+                        <td class="text-center align-middle" style="padding: 10px;" onclick="event.stopPropagation();">${avisRetourPdfHtml}</td>
+                    </tr>
+                `;
+            });
+            
+            if (tableRowsHtml === '') {
+                tableRowsHtml = `
+                    <tr>
+                        <td colspan="15" class="text-center py-4">
+                            <i class="fas fa-inbox text-muted" style="font-size: 2rem;"></i>
+                            <p class="text-muted mt-2 mb-0">Aucune demande de congé trouvée</p>
+                        </td>
+                    </tr>
+                `;
+            }
+            
+            tbody.innerHTML = tableRowsHtml;
+        }
     }
     
     // Render pagination
@@ -1062,14 +1228,17 @@ function generatePaginationLinks(currentPage, totalPages) {
 }
 
 function debounceSearch() {
-    clearTimeout(searchTimeout);
-    searchTimeout = setTimeout(function() {
+    clearTimeout(window.trackingSearchTimeout);
+    window.trackingSearchTimeout = setTimeout(function() {
+        window.trackingCurrentPage = 1;
         currentPage = 1;
         filterAndPaginateDemandes();
     }, 300);
+    searchTimeout = window.trackingSearchTimeout;
 }
 
 function updateFilters() {
+    window.trackingCurrentPage = 1;
     currentPage = 1;
     filterAndPaginateDemandes();
 }
@@ -1095,6 +1264,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const pageLink = e.target.closest('.page-link');
             const page = parseInt(pageLink.getAttribute('data-page'));
             if (page && page !== currentPage) {
+                window.trackingCurrentPage = page;
                 currentPage = page;
                 filterAndPaginateDemandes();
                 // Scroll to top
@@ -1103,27 +1273,93 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
-    // Initial render
-    filterAndPaginateDemandes();
-});
-
-// Scroll indicator
-document.addEventListener('DOMContentLoaded', function() {
-    const tableContainer = document.querySelector('.table-responsive');
-    const indicator = document.querySelector('.table-scroll-indicator');
-    
-    if (tableContainer && indicator) {
-        tableContainer.addEventListener('scroll', function() {
-            const scrollLeft = this.scrollLeft;
-            const maxScrollLeft = this.scrollWidth - this.clientWidth;
-            const scrollPercentage = (scrollLeft / maxScrollLeft) * 100;
-            
-            indicator.style.width = scrollPercentage + '%';
-            indicator.style.opacity = scrollLeft > 0 ? '1' : '0';
-        });
+    // Initial render - always call filterAndPaginateDemandes to handle empty state
+    if (typeof allDemandesData !== 'undefined') {
+        // Render immediately (will show empty state if no data)
+        filterAndPaginateDemandes();
+        
+        // Ensure table is visible and cards are hidden after rendering (default to table view)
+        const cardsContainer = document.getElementById('demandesCardsContainer');
+        const tableView = document.getElementById('tableView');
+        const toggleBtn = document.getElementById('toggleViewBtn');
+        
+        if (cardsContainer) {
+            cardsContainer.style.display = 'none';
+            cardsContainer.classList.add('d-none');
+        }
+        
+        if (tableView) {
+            tableView.removeAttribute('style');
+            tableView.style.display = 'block';
+            tableView.classList.remove('d-none');
+        }
+        
+        if (toggleBtn) {
+            toggleBtn.innerHTML = '<i class="fas fa-th-large me-1"></i> Vue Cartes';
+        }
+    } else {
+        // If JavaScript data is not available, show the initial Blade-rendered content (default to table view)
+        const cardsContainer = document.getElementById('demandesCardsContainer');
+        const tableView = document.getElementById('tableView');
+        const toggleBtn = document.getElementById('toggleViewBtn');
+        
+        if (cardsContainer) {
+            cardsContainer.style.display = 'none';
+            cardsContainer.classList.add('d-none');
+        }
+        
+        if (tableView) {
+            tableView.removeAttribute('style');
+            tableView.style.display = 'block';
+            tableView.classList.remove('d-none');
+        }
+        
+        if (toggleBtn) {
+            toggleBtn.innerHTML = '<i class="fas fa-th-large me-1"></i> Vue Cartes';
+        }
     }
+    }); // Close the first DOMContentLoaded callback
+    
+    // Scroll indicator
+    document.addEventListener('DOMContentLoaded', function() {
+        const tableContainer = document.querySelector('.table-responsive');
+        const indicator = document.querySelector('.table-scroll-indicator');
+        
+        if (tableContainer && indicator) {
+            tableContainer.addEventListener('scroll', function() {
+                const scrollLeft = this.scrollLeft;
+                const maxScrollLeft = this.scrollWidth - this.clientWidth;
+                const scrollPercentage = (scrollLeft / maxScrollLeft) * 100;
+                
+                indicator.style.width = scrollPercentage + '%';
+                indicator.style.opacity = scrollLeft > 0 ? '1' : '0';
+            });
+        }
 
-});
+        // Handle persistent alert dismissal
+        const leaveInfoAlert = document.getElementById('leaveInfoAlert');
+        if (leaveInfoAlert) {
+            const alertKey = leaveInfoAlert.getAttribute('data-alert-key');
+            
+            // Check if alert was previously dismissed
+            if (localStorage.getItem(alertKey) === 'dismissed') {
+                leaveInfoAlert.style.display = 'none';
+            }
+            
+            // Handle close button click
+            const closeButton = leaveInfoAlert.querySelector('.btn-close');
+            if (closeButton) {
+                closeButton.addEventListener('click', function() {
+                    if (alertKey) {
+                        localStorage.setItem(alertKey, 'dismissed');
+                        leaveInfoAlert.style.display = 'none';
+                    }
+                });
+            }
+        }
+    });
+
+})();
 </script>
 @endpush
 @endsection

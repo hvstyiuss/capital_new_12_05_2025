@@ -14,6 +14,7 @@ class AvisRetour extends Model
         'nbr_jours_consumes',
         'statut',
         'pdf_path',
+        'verification_code',
         'explanation_required',
         'explanation_deadline',
         'explanation_provided',

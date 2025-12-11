@@ -79,6 +79,37 @@ class NotificationController extends Controller
             'unread_count' => $unreadCount,
         ]);
     }
+
+    /**
+     * Delete a notification.
+     */
+    public function destroy(Request $request, $id)
+    {
+        $user = Auth::user();
+        $notification = $user->notifications()->findOrFail($id);
+        
+        $notification->delete();
+        
+        $unreadCount = $user->notifications()->whereNull('read_at')->count();
+        
+        return response()->json([
+            'success' => true,
+            'unread_count' => $unreadCount,
+        ]);
+    }
+
+    /**
+     * Delete all notifications.
+     */
+    public function deleteAll(Request $request)
+    {
+        $user = Auth::user();
+        $user->notifications()->delete();
+        
+        return response()->json([
+            'success' => true,
+        ]);
+    }
 }
 
 

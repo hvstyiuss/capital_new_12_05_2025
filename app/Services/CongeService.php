@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Conge;
+use App\Models\Demande;
 use App\Repositories\CongeRepository;
 use Carbon\Carbon;
 
@@ -101,15 +102,61 @@ class CongeService
             $totalAvailable = $reliquatAnneeAnterieure + $reliquatAnneeCourante;
             $cumulJoursConsommes = max(0, $totalAvailable - $soldeActuel);
             
-            // Use solde_actuel as remaining days
-            $reste = $soldeActuel;
+            // Get actual days consumed from approved avis de retour (use actual days, not requested days)
+            $approvedAvisRetourDays = \App\Models\Demande::where('ppr', $ppr)
+                ->whereHas('avis.avisRetour', function($query) {
+                    $query->where('statut', 'approved');
+                })
+                ->with(['avis.avisRetour'])
+                ->get()
+                ->sum(function($demande) {
+                    $avisRetour = $demande->avis->avisRetour ?? null;
+                    if ($avisRetour && $avisRetour->statut === 'approved') {
+                        // Use actual days consumed from avis de retour
+                        return $avisRetour->nbr_jours_consumes ?? 0;
+                    }
+                    return 0;
+                });
+            
+            // Get approved avis de départ days that don't have avis de retour yet (still pending return)
+            $approvedAvisDepartWithoutRetourDays = \App\Models\Demande::where('ppr', $ppr)
+                ->whereHas('avis.avisDepart', function($query) {
+                    $query->where('statut', 'approved');
+                })
+                ->whereHas('avis', function($query) {
+                    $query->whereDoesntHave('avisRetour');
+                })
+                ->with(['avis.avisDepart'])
+                ->get()
+                ->sum(function($demande) {
+                    $avisDepart = $demande->avis->avisDepart ?? null;
+                    return $avisDepart ? ($avisDepart->nb_jours_demandes ?? 0) : 0;
+                });
+            
+            // Deduct pending avis de départ days from remaining balance
+            $pendingAvisDepartDays = \App\Models\Demande::where('ppr', $ppr)
+                ->whereHas('avis.avisDepart', function($query) {
+                    $query->where('statut', 'pending');
+                })
+                ->with(['avis.avisDepart'])
+                ->get()
+                ->sum(function($demande) {
+                    $avisDepart = $demande->avis->avisDepart ?? null;
+                    return $avisDepart ? ($avisDepart->nb_jours_demandes ?? 0) : 0;
+                });
+            
+            // Calculate remaining days: solde_actuel minus actual consumed days and pending days
+            $reste = max(0, $soldeActuel - $approvedAvisRetourDays - $approvedAvisDepartWithoutRetourDays - $pendingAvisDepartDays);
+            
+            // Total consumed = base consumed + actual avis retour days + approved avis départ without retour + pending days
+            $totalConsumed = $cumulJoursConsommes + $approvedAvisRetourDays + $approvedAvisDepartWithoutRetourDays + $pendingAvisDepartDays;
             
             return [
                 'conge' => null, // No Conge model instance when using solde_conges
                 'reference_decision' => 'N/A',
                 'reliquat_annee_anterieure' => $reliquatAnneeAnterieure,
                 'reliquat_annee_courante' => $reliquatAnneeCourante,
-                'cumul_jours_consommes' => $cumulJoursConsommes,
+                'cumul_jours_consommes' => $totalConsumed,
                 'reste' => $reste,
                 'jours_restants' => $reste,
                 'has_remaining_leave' => $reste > 0,
@@ -118,14 +165,63 @@ class CongeService
         
         // Fallback to conges table if solde_conges doesn't have data
         $conge = $this->getOrCreateAnnualLeave($ppr, $year);
-        $reste = $this->calculateRemainingDays($conge);
+        
+        // Get actual days consumed from approved avis de retour (use actual days, not requested days)
+        $approvedAvisRetourDays = \App\Models\Demande::where('ppr', $ppr)
+            ->whereHas('avis.avisRetour', function($query) {
+                $query->where('statut', 'approved');
+            })
+            ->with(['avis.avisRetour'])
+            ->get()
+            ->sum(function($demande) {
+                $avisRetour = $demande->avis->avisRetour ?? null;
+                if ($avisRetour && $avisRetour->statut === 'approved') {
+                    // Use actual days consumed from avis de retour
+                    return $avisRetour->nbr_jours_consumes ?? 0;
+                }
+                return 0;
+            });
+        
+        // Get approved avis de départ days that don't have avis de retour yet (still pending return)
+        $approvedAvisDepartWithoutRetourDays = \App\Models\Demande::where('ppr', $ppr)
+            ->whereHas('avis.avisDepart', function($query) {
+                $query->where('statut', 'approved');
+            })
+            ->whereHas('avis', function($query) {
+                $query->whereDoesntHave('avisRetour');
+            })
+            ->with(['avis.avisDepart'])
+            ->get()
+            ->sum(function($demande) {
+                $avisDepart = $demande->avis->avisDepart ?? null;
+                return $avisDepart ? ($avisDepart->nb_jours_demandes ?? 0) : 0;
+            });
+        
+        // Deduct pending avis de départ days from remaining balance
+        $pendingAvisDepartDays = \App\Models\Demande::where('ppr', $ppr)
+            ->whereHas('avis.avisDepart', function($query) {
+                $query->where('statut', 'pending');
+            })
+            ->with(['avis.avisDepart'])
+            ->get()
+            ->sum(function($demande) {
+                $avisDepart = $demande->avis->avisDepart ?? null;
+                return $avisDepart ? ($avisDepart->nb_jours_demandes ?? 0) : 0;
+            });
+        
+        // Calculate remaining days: base remaining minus actual consumed and pending days
+        $baseRemaining = $this->calculateRemainingDays($conge);
+        $reste = max(0, $baseRemaining - $approvedAvisRetourDays - $approvedAvisDepartWithoutRetourDays - $pendingAvisDepartDays);
+        
+        // Total consumed = base consumed + actual avis retour days + approved avis départ without retour + pending days
+        $totalConsumed = $conge->cumul_jours_consommes + $approvedAvisRetourDays + $approvedAvisDepartWithoutRetourDays + $pendingAvisDepartDays;
 
         return [
             'conge' => $conge,
             'reference_decision' => $conge->reference_decision ?? 'N/A',
             'reliquat_annee_anterieure' => $conge->reliquat_annee_anterieure,
             'reliquat_annee_courante' => $conge->reliquat_annee_courante,
-            'cumul_jours_consommes' => $conge->cumul_jours_consommes,
+            'cumul_jours_consommes' => $totalConsumed,
             'reste' => $reste,
             'jours_restants' => $reste,
             'has_remaining_leave' => $reste > 0,
@@ -145,6 +241,58 @@ class CongeService
         if ($conge && $conge->cumul_jours_consommes >= $nbJours) {
             $conge->decrement('cumul_jours_consommes', $nbJours);
         }
+    }
+
+    /**
+     * Update solde_conges based on actual days consumed from avis de retour.
+     * This adjusts the balance when avis de retour is validated.
+     */
+    public function updateSoldeFromAvisRetour(string $ppr, int $actualDaysConsumed, int $previouslyDeductedDays, ?int $year = null): void
+    {
+        $year = $year ?? Carbon::now()->year;
+        
+        // Get solde_conges record
+        $soldeConge = \Illuminate\Support\Facades\DB::table('solde_conges')
+            ->where('ppr', $ppr)
+            ->where('type', 'Congé Administratif Annuel')
+            ->where('annee', $year)
+            ->first();
+        
+        if (!$soldeConge) {
+            return; // No solde record to update
+        }
+        
+        // Calculate the difference
+        // If actualDaysConsumed < previouslyDeductedDays, difference is negative (we refund)
+        // If actualDaysConsumed > previouslyDeductedDays, difference is positive (we deduct more)
+        $difference = $actualDaysConsumed - $previouslyDeductedDays;
+        
+        if ($difference == 0) {
+            // No adjustment needed (actual days = previously deducted)
+            return;
+        }
+        
+        // Special case: if actualDaysConsumed is 0 (same day return), we refund all previously deducted days
+        // This ensures same-day returns result in full refund
+        
+        // Update solde_actuel
+        // If difference is negative (e.g., -3), we're refunding 3 days, so add 3: solde - (-3) = solde + 3
+        // If difference is positive (e.g., +1), we're deducting 1 more day, so subtract 1: solde - 1
+        $newSoldeActuel = $soldeConge->solde_actuel - $difference;
+        
+        // Ensure solde_actuel doesn't exceed total available
+        $totalAvailable = ($soldeConge->solde_precedent ?? 0) + ($soldeConge->solde_fix ?? 0);
+        $newSoldeActuel = min($newSoldeActuel, $totalAvailable);
+        $newSoldeActuel = max(0, $newSoldeActuel); // Can't be negative
+        
+        \Illuminate\Support\Facades\DB::table('solde_conges')
+            ->where('ppr', $ppr)
+            ->where('type', 'Congé Administratif Annuel')
+            ->where('annee', $year)
+            ->update([
+                'solde_actuel' => $newSoldeActuel,
+                'updated_at' => Carbon::now(),
+            ]);
     }
 }
 

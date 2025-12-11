@@ -447,10 +447,26 @@
         }
     }
 
+    // Profile functions for app.blade.php
+    function toggleProfileApp() {
+        const panel = document.getElementById('profilePanelApp');
+        if (panel) {
+            const isVisible = panel.style.display === 'block';
+            panel.style.display = isVisible ? 'none' : 'block';
+            
+            // Close notification panel if open
+            const notificationPanel = document.getElementById('notificationPanel');
+            if (notificationPanel) {
+                notificationPanel.classList.remove('show');
+            }
+        }
+    }
+
     // Close dropdowns when clicking outside
     document.addEventListener('click', function(event) {
         const notificationDropdown = document.querySelector('.notification-dropdown');
         const profileDropdown = document.querySelector('.profile-dropdown');
+        const profileDropdownApp = document.querySelector('.profile-dropdown-app');
         
         // Close notification panel if clicking outside
         if (notificationDropdown && !notificationDropdown.contains(event.target)) {
@@ -460,11 +476,19 @@
             }
         }
         
-        // Close profile panel if clicking outside
+        // Close profile panel if clicking outside (top-bar)
         if (profileDropdown && !profileDropdown.contains(event.target)) {
             const profilePanel = document.getElementById('profilePanel');
             if (profilePanel) {
                 profilePanel.classList.remove('show');
+            }
+        }
+
+        // Close profile panel if clicking outside (app.blade.php)
+        if (profileDropdownApp && !profileDropdownApp.contains(event.target)) {
+            const profilePanelApp = document.getElementById('profilePanelApp');
+            if (profilePanelApp) {
+                profilePanelApp.style.display = 'none';
             }
         }
     });
@@ -474,12 +498,16 @@
         if (event.key === 'Escape') {
             const notificationPanel = document.getElementById('notificationPanel');
             const profilePanel = document.getElementById('profilePanel');
+            const profilePanelApp = document.getElementById('profilePanelApp');
             
             if (notificationPanel) {
                 notificationPanel.classList.remove('show');
             }
             if (profilePanel) {
                 profilePanel.classList.remove('show');
+            }
+            if (profilePanelApp) {
+                profilePanelApp.style.display = 'none';
             }
         }
     });

@@ -5,7 +5,7 @@ namespace App\Console\Commands;
 use Illuminate\Console\Command;
 use App\Models\AvisDepart;
 use App\Models\Demande;
-use App\Http\Controllers\LeaveController;
+use App\Services\LeavePDFService;
 use Illuminate\Support\Facades\DB;
 
 class GenerateMissingAvisDepartPDFs extends Command
@@ -47,7 +47,7 @@ class GenerateMissingAvisDepartPDFs extends Command
 
         $this->info("Trouvé {$avisDeparts->count()} avis de départ approuvés sans PDF.");
 
-        $controller = new LeaveController();
+        $pdfService = app(LeavePDFService::class);
         $generated = 0;
         $failed = 0;
 
@@ -60,11 +60,8 @@ class GenerateMissingAvisDepartPDFs extends Command
                     continue;
                 }
 
-                // Generate PDF using reflection to access private method
-                $reflection = new \ReflectionClass($controller);
-                $method = $reflection->getMethod('generateAvisDepartPDF');
-                $method->setAccessible(true);
-                $pdfPath = $method->invoke($controller, $avisDepart, $demande->user);
+                // Generate PDF using service
+                $pdfPath = $pdfService->generateAvisDepartPDF($avisDepart, $demande->user);
 
                 // Update avis depart with PDF path
                 $avisDepart->update(['pdf_path' => $pdfPath]);

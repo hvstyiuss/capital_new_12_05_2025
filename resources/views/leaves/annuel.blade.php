@@ -48,7 +48,7 @@
             <div class="card border-0 shadow-sm h-100">
                 <div class="card-body text-center p-4">
                     <h6 class="text-muted small mb-2 fw-semibold">Reliquat Année Courante</h6>
-                    <p class="mb-0 fw-bold text-info fs-5">{{ $leaveData['reliquat_annee_courante'] ?? 0 }}j</p>
+                    <p class="mb-0 fw-bold text-secondary fs-5">{{ $leaveData['reliquat_annee_courante'] ?? 0 }}j</p>
                 </div>
             </div>
         </div>
@@ -73,7 +73,8 @@
     @endif
 
     @if($hasPendingAvisDepart && !$hasReturnDateToday)
-        <div class="alert alert-info alert-dismissible fade show mb-4" role="alert">
+        <div class="alert alert-info alert-dismissible show mb-4" id="pendingAvisDepartAlert" role="alert" data-no-auto-hide="true" data-alert-key="pending-avis-depart-alert">
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             <i class="fas fa-info-circle me-2"></i>
             <strong>En attente de validation</strong>
             <p class="mb-0 mt-1">Vous ne pouvez pas déclarer votre retour tant que votre chef n'a pas validé l'avis de départ.</p>
@@ -86,7 +87,6 @@
                     </button>
                 </form>
             @endif
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
     @endif
 
@@ -143,4 +143,23 @@
         </div>
     </div>
 </div>
+
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Persistent dismissal for pendingAvisDepartAlert
+    const pendingAvisDepartAlert = document.getElementById('pendingAvisDepartAlert');
+    if (pendingAvisDepartAlert) {
+        const alertKey = pendingAvisDepartAlert.getAttribute('data-alert-key');
+        if (localStorage.getItem(alertKey) === 'dismissed') {
+            pendingAvisDepartAlert.remove();
+        } else {
+            pendingAvisDepartAlert.addEventListener('closed.bs.alert', function () {
+                localStorage.setItem(alertKey, 'dismissed');
+            });
+        }
+    }
+});
+</script>
+@endpush
 @endsection

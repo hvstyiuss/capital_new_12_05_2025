@@ -4,25 +4,6 @@
 
 @section('content')
 <div class="container-fluid px-4 py-4">
-    <!-- Success/Error Messages -->
-    @php
-        $successMessage = session('success');
-        $errorMessage = session('error');
-    @endphp
-    @if($successMessage)
-    <div class="alert alert-success alert-dismissible fade show" role="alert" id="successAlert">
-        <i class="fas fa-check-circle me-2"></i>{{ $successMessage }}
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    </div>
-    @endif
-    
-    @if($errorMessage)
-    <div class="alert alert-danger alert-dismissible fade show" role="alert" id="errorAlert">
-        <i class="fas fa-exclamation-circle me-2"></i>{{ $errorMessage }}
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    </div>
-    @endif
-    
     <!-- Header -->
     <div class="mb-4">
         <div class="d-flex justify-content-between align-items-center flex-wrap">
@@ -314,40 +295,55 @@
                                 <p class="text-muted small mb-0">{{ $avisRetour->created_at->format('H:i') }}</p>
                             </div>
                         </div>
+                        @php
+                            $hasPdfPath = isset($avisRetour->pdf_path) && $avisRetour->pdf_path && $avisRetour->pdf_path !== '';
+                            $hasExplanationPdf = isset($avisRetour->explanation_pdf_path) && $avisRetour->explanation_pdf_path && $avisRetour->explanation_pdf_path !== '';
+                            
+                            // Check if explanation is needed (actual return date > declared return date)
+                            $needsExplanation = false;
+                            if ($avisRetour->date_retour_declaree && $avisRetour->date_retour_effectif) {
+                                $dateRetourDeclaree = \Carbon\Carbon::parse($avisRetour->date_retour_declaree);
+                                $dateRetourEffectif = \Carbon\Carbon::parse($avisRetour->date_retour_effectif);
+                                $needsExplanation = $dateRetourEffectif->greaterThan($dateRetourDeclaree);
+                            }
+                        @endphp
                         @if($avisRetour->statut == 'approved')
-                            @php
-                                $hasPdfPath = isset($avisRetour->pdf_path) && $avisRetour->pdf_path && $avisRetour->pdf_path !== '';
-                                $hasExplanationPdf = isset($avisRetour->explanation_pdf_path) && $avisRetour->explanation_pdf_path && $avisRetour->explanation_pdf_path !== '';
-                            @endphp
-                            @if($hasPdfPath)
                             <div class="col-12">
-                                <div class="d-flex align-items-center gap-2">
+                                <div class="d-flex align-items-center gap-2 flex-wrap">
+                                    @if($hasPdfPath)
                                     <a href="{{ route('hr.leaves.download-avis-retour-pdf', $avisRetour->id) }}" 
                                        class="btn btn-outline-success" 
                                        target="_blank">
                                         <i class="fas fa-file-pdf me-2"></i>
                                         Télécharger l'Avis de Retour (PDF)
                                     </a>
-                                </div>
-                            </div>
-                            @elseif($hasExplanationPdf)
-                            <div class="col-12">
-                                <div class="d-flex align-items-center gap-2">
+                                    @else
+                                    <a href="{{ route('hr.leaves.download-avis-retour-pdf', $avisRetour->id) }}" 
+                                       class="btn btn-outline-success" 
+                                       target="_blank"
+                                       title="Le PDF sera généré automatiquement lors du téléchargement">
+                                        <i class="fas fa-file-pdf me-2"></i>
+                                        Télécharger l'Avis de Retour (PDF)
+                                    </a>
+                                    @endif
+                                    @if($hasExplanationPdf || $needsExplanation)
                                     <a href="{{ route('hr.leaves.download-explanation-pdf', $avisRetour->id) }}" 
                                        class="btn btn-outline-danger" 
-                                       target="_blank">
+                                       target="_blank"
+                                       title="{{ $hasExplanationPdf ? '' : 'Le PDF sera généré automatiquement lors du téléchargement' }}">
                                         <i class="fas fa-file-pdf me-2"></i>
                                         Télécharger la Note d'Explication (PDF)
                                     </a>
+                                    @endif
                                 </div>
                             </div>
-                            @endif
-                        @elseif(isset($avisRetour->explanation_pdf_path) && $avisRetour->explanation_pdf_path && $avisRetour->explanation_pdf_path !== '')
+                        @elseif($hasExplanationPdf || $needsExplanation)
                         <div class="col-12">
                             <div class="d-flex align-items-center gap-2">
                                 <a href="{{ route('hr.leaves.download-explanation-pdf', $avisRetour->id) }}" 
                                    class="btn btn-outline-danger" 
-                                   target="_blank">
+                                   target="_blank"
+                                   title="{{ $hasExplanationPdf ? '' : 'Le PDF sera généré automatiquement lors du téléchargement' }}">
                                     <i class="fas fa-file-pdf me-2"></i>
                                     Télécharger la Note d'Explication (PDF)
                                 </a>
@@ -467,27 +463,64 @@ function cancelEditDate(avisRetourId) {
     }
 }
 
-// Handle approve form submission
-document.getElementById('approveForm')?.addEventListener('submit', function(e) {
-    if (!confirm('Êtes-vous sûr de vouloir approuver cet avis de départ?')) {
-        e.preventDefault();
-        return false;
-    }
-});
-
-// Remove duplicate alerts
-document.addEventListener('DOMContentLoaded', function() {
-    const alerts = document.querySelectorAll('.alert-success, .alert-danger');
-    const seenMessages = new Set();
+// Handle approve form submission - prevent duplicate confirmations
+(function() {
+    const approveForm = document.getElementById('approveForm');
+    if (!approveForm) return;
     
-    alerts.forEach(function(alert) {
-        const message = alert.textContent.trim();
-        if (seenMessages.has(message)) {
-            alert.remove();
-        } else {
-            seenMessages.add(message);
+    // Check if handler already attached
+    if (approveForm.dataset.confirmHandlerAttached === 'true') {
+        return;
+    }
+    
+    // Mark as having handler attached
+    approveForm.dataset.confirmHandlerAttached = 'true';
+    
+    let confirmationShown = false;
+    
+    approveForm.addEventListener('submit', function(e) {
+        // Prevent duplicate confirmations
+        if (confirmationShown) {
+            // Already confirmed, allow submission
+            return true;
         }
-    });
+        
+        // Show confirmation only once
+        if (!confirm('Êtes-vous sûr de vouloir approuver cet avis de départ?')) {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            return false;
+        }
+        
+        // Mark confirmation as shown
+        confirmationShown = true;
+        
+        // Allow form to submit
+        return true;
+    }, true); // Use capture phase to run before other handlers
+})();
+
+// Remove duplicate alerts - improved detection
+document.addEventListener('DOMContentLoaded', function() {
+    // Wait a bit to ensure all alerts are rendered
+    setTimeout(function() {
+        const alerts = document.querySelectorAll('.alert-success, .alert-danger');
+        const seenMessages = new Map();
+        
+        alerts.forEach(function(alert) {
+            // Get clean message text (remove icons, buttons, and extra whitespace)
+            const alertClone = alert.cloneNode(true);
+            alertClone.querySelectorAll('.btn-close, i, button').forEach(el => el.remove());
+            const message = alertClone.textContent.trim().replace(/\s+/g, ' ');
+            
+            if (message && seenMessages.has(message)) {
+                // Remove duplicate alert (keep the first one, remove subsequent ones)
+                alert.remove();
+            } else if (message) {
+                seenMessages.set(message, alert);
+            }
+        });
+    }, 100);
 });
 </script>
 @endpush

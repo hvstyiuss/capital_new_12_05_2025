@@ -15,6 +15,7 @@ class AvisDepart extends Model
         'odf',
         'statut',
         'pdf_path',
+        'verification_code',
     ];
 
     protected $casts = [

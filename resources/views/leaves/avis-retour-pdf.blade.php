@@ -1,134 +1,267 @@
+@php
+    use SimpleSoftwareIO\QrCode\Facades\QrCode;
+@endphp
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Avis de Retour - Congé</title>
+    <title>إعلان بالعودة - Avis de Retour</title>
     <style>
+        @page {
+            margin: 20mm;
+        }
         body {
-            font-family: Arial, sans-serif;
-            margin: 40px;
-            color: #333;
+            font-family: 'Arial', 'DejaVu Sans', sans-serif;
+            margin: 0;
+            padding: 0;
+            color: #000;
+            font-size: 12pt;
+            direction: rtl;
         }
         .header {
             text-align: center;
-            margin-bottom: 30px;
-            border-bottom: 3px solid #28a745;
-            padding-bottom: 20px;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
         }
-        .header h1 {
-            color: #28a745;
-            margin: 0;
-            font-size: 24px;
+        .logo {
+            width: 120px;
+            height: auto;
+            margin: 0 auto 10px;
+            display: block;
         }
-        .info-section {
-            margin: 20px 0;
+        .agency-name-ar {
+            font-size: 16pt;
+            font-weight: bold;
+            margin: 5px 0;
+            color: #2c5530;
+        }
+        .agency-name-fr {
+            font-size: 14pt;
+            font-weight: bold;
+            margin: 5px 0;
+            color: #2c5530;
+        }
+        .directorate {
+            font-size: 13pt;
+            font-weight: bold;
+            margin: 10px 0 5px;
+            color: #000;
+        }
+        .document-title {
+            font-size: 18pt;
+            font-weight: bold;
+            margin: 15px 0;
+            color: #000;
+            text-decoration: underline;
+        }
+        .content-wrapper {
+            display: table;
+            width: 100%;
+            margin-top: 20px;
+        }
+        .left-section, .right-section {
+            display: table-cell;
+            vertical-align: top;
+            width: 48%;
             padding: 15px;
-            background-color: #f5f5f5;
-            border-left: 4px solid #28a745;
+        }
+        .left-section {
+            border-left: 2px solid #000;
+            padding-right: 20px;
+        }
+        .right-section {
+            padding-left: 20px;
         }
         .info-row {
-            margin: 10px 0;
-            display: flex;
-            justify-content: space-between;
+            margin: 12px 0;
+            line-height: 1.8;
         }
         .info-label {
             font-weight: bold;
-            color: #555;
+            display: inline-block;
+            min-width: 180px;
         }
         .info-value {
-            color: #333;
+            display: inline-block;
         }
-        .approval-box {
-            background-color: #d4edda;
-            border: 2px solid #28a745;
-            padding: 15px;
-            margin: 20px 0;
-            border-radius: 5px;
-            text-align: center;
-        }
-        .approval-box strong {
-            color: #155724;
-            font-size: 18px;
-        }
-        .footer {
+        .signature-section {
             margin-top: 40px;
+            display: table;
+            width: 100%;
+            border-top: 2px solid #000;
             padding-top: 20px;
-            border-top: 2px solid #ddd;
+        }
+        .signature-box {
+            display: table-cell;
+            width: 33.33%;
             text-align: center;
-            color: #666;
-            font-size: 12px;
+            vertical-align: top;
+            padding: 0 10px;
+        }
+        .signature-label {
+            font-weight: bold;
+            margin-bottom: 60px;
+            font-size: 11pt;
+        }
+        .signature-checkbox {
+            margin: 10px 0;
+            font-size: 10pt;
+        }
+        .qr-code-placeholder {
+            width: 80px;
+            height: 80px;
+            border: 1px solid #ccc;
+            margin: 10px auto;
+            display: block;
+            background: #f5f5f5;
+        }
+        .qr-code {
+            width: 80px;
+            height: 80px;
+            margin: 10px auto;
+            display: block;
+        }
+        .qr-code img {
+            width: 100%;
+            height: 100%;
+        }
+        .date-section {
+            text-align: left;
+            margin-top: 30px;
+            font-size: 10pt;
+            direction: ltr;
         }
     </style>
 </head>
 <body>
     <div class="header">
-        <h1>AVIS DE RETOUR</h1>
-        <p>Retour de Congé Administratif</p>
-    </div>
-
-    <div class="info-section">
-        <h2 style="margin-top: 0; color: #28a745;">Informations du Collaborateur</h2>
-        <div class="info-row">
-            <span class="info-label">Nom Complet:</span>
-            <span class="info-value">{{ $user->fname }} {{ $user->lname }}</span>
-        </div>
-        <div class="info-row">
-            <span class="info-label">PPR:</span>
-            <span class="info-value">{{ $user->ppr }}</span>
-        </div>
-        @if($user->userInfo && $user->userInfo->grade)
-        <div class="info-row">
-            <span class="info-label">Grade:</span>
-            <span class="info-value">{{ $user->userInfo->grade->name }}</span>
-        </div>
+        @php
+            $logoPath = public_path('images/anef.png');
+            $logoData = file_exists($logoPath) ? 'data:image/png;base64,' . base64_encode(file_get_contents($logoPath)) : '';
+        @endphp
+        @if($logoData)
+        <img src="{{ $logoData }}" alt="ANEF Logo" class="logo">
         @endif
+        <div class="agency-name-ar">الوكالة الوطنية للمياه والغابات</div>
+        <div class="agency-name-fr">AGENCE NATIONALE DES EAUX ET FORETS</div>
+        <div class="directorate">مديرية الرأسمال البشري واللوجستيك</div>
+        <div class="document-title">إعلان بالعودة</div>
     </div>
 
-    <div class="info-section">
-        <h2 style="margin-top: 0; color: #28a745;">Informations du Congé</h2>
-        @if($avisDepart)
-        <div class="info-row">
-            <span class="info-label">Date de Départ:</span>
-            <span class="info-value">{{ \Carbon\Carbon::parse($avisDepart->date_depart)->format('d/m/Y') }}</span>
+    <div class="content-wrapper">
+        <div class="left-section">
+            <div class="info-row">
+                <span class="info-label">{{ strtoupper($user->fname) }} {{ strtoupper($user->lname) }}</span>
+            </div>
+            @php
+                $currentParcours = \App\Models\Parcours::where('ppr', $user->ppr)
+                    ->where(function($query) {
+                        $query->whereNull('date_fin')
+                              ->orWhere('date_fin', '>=', now());
+                    })
+                    ->with(['entite', 'grade'])
+                    ->orderBy('date_debut', 'desc')
+                    ->first();
+                
+                $gradeName = $user->userInfo && $user->userInfo->grade 
+                    ? strtoupper($user->userInfo->grade->name) 
+                    : ($currentParcours && $currentParcours->grade 
+                        ? strtoupper($currentParcours->grade->name) 
+                        : '');
+                
+                $serviceName = $currentParcours && $currentParcours->entite 
+                    ? $currentParcours->entite->name 
+                    : '';
+            @endphp
+            @if($gradeName)
+            <div class="info-row">
+                <span class="info-label">{{ $gradeName }}</span>
+            </div>
+            @endif
+            <div class="info-row">
+                <span class="info-label">رقم التأجير : {{ $user->ppr }}</span>
+            </div>
+            @if($serviceName)
+            <div class="info-row">
+                <span class="info-label">{{ $serviceName }}</span>
+            </div>
+            @endif
         </div>
-        <div class="info-row">
-            <span class="info-label">Date de Retour Prévue:</span>
-            <span class="info-value">{{ $avisDepart->date_retour ? \Carbon\Carbon::parse($avisDepart->date_retour)->format('d/m/Y') : 'N/A' }}</span>
-        </div>
-        @endif
-        <div class="info-row">
-            <span class="info-label">Date de Retour Déclarée:</span>
-            <span class="info-value">{{ $avisRetour->date_retour_declaree ? \Carbon\Carbon::parse($avisRetour->date_retour_declaree)->format('d/m/Y') : 'N/A' }}</span>
-        </div>
-        <div class="info-row">
-            <span class="info-label">Date de Retour Effectif:</span>
-            <span class="info-value">{{ $avisRetour->date_retour_effectif ? \Carbon\Carbon::parse($avisRetour->date_retour_effectif)->format('d/m/Y') : 'N/A' }}</span>
-        </div>
-        <div class="info-row">
-            <span class="info-label">Nombre de Jours Consommés:</span>
-            <span class="info-value">{{ $avisRetour->nbr_jours_consumes }} jour(s)</span>
-        </div>
-        <div class="info-row">
-            <span class="info-label">Date de Dépôt:</span>
-            <span class="info-value">{{ $avisRetour->created_at->format('d/m/Y à H:i') }}</span>
+
+        <div class="right-section">
+            <div class="info-row">
+                <span class="info-label">السيد (ة) :</span>
+                <span class="info-value"></span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">الرتبة :</span>
+                <span class="info-value">{{ $gradeName ?: '' }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">الوظيفة :</span>
+                <span class="info-value">{{ $currentParcours && $currentParcours->poste ? $currentParcours->poste : 'Chef de service' }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">مصلحة التعيين :</span>
+                <span class="info-value">{{ $serviceName ?: '' }}</span>
+            </div>
+            @if($avisDepart)
+            <div class="info-row">
+                <span class="info-label">تاريخ الذهاب :</span>
+                <span class="info-value">{{ \Carbon\Carbon::parse($avisDepart->date_depart)->format('d-m-Y') }}</span>
+            </div>
+            @endif
+            <div class="info-row">
+                <span class="info-label">تاريخ الإياب المعلن :</span>
+                <span class="info-value">{{ $avisRetour->date_retour_declaree ? \Carbon\Carbon::parse($avisRetour->date_retour_declaree)->format('d-m-Y') : '' }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">تاريخ الإياب الفعلي :</span>
+                <span class="info-value">{{ $avisRetour->date_retour_effectif ? \Carbon\Carbon::parse($avisRetour->date_retour_effectif)->format('d-m-Y') : '' }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">عدد الأيام المستهلكة :</span>
+                <span class="info-value">{{ $avisRetour->nbr_jours_consumes ?? 0 }} ايام</span>
+            </div>
         </div>
     </div>
 
-    <div class="approval-box">
-        <strong>✓ AVIS DE RETOUR VALIDÉ</strong>
-        <p style="margin: 10px 0 0 0; color: #155724;">Date de validation: {{ \Carbon\Carbon::now()->format('d/m/Y à H:i') }}</p>
+    <div class="signature-section">
+        <div class="signature-box" style="text-align: right;">
+            <div class="signature-label">إمضاء المعني بالأمر</div>
+            <div class="signature-checkbox">
+                <input type="checkbox" checked disabled> علامة موافقة بمثابة التوقيع إلكتروني
+            </div>
+            @if(isset($verificationUrl) && !empty($verificationUrl))
+            <div class="qr-code">
+                @php
+                    try {
+                        // Generate QR code as SVG (works without GD extension)
+                        echo QrCode::size(80)->format('svg')->generate($verificationUrl);
+                    } catch (\Exception $e) {
+                        // If QR code generation fails, show URL as text
+                        echo '<div style="text-align:center;font-size:8pt;word-break:break-all;">' . htmlspecialchars($verificationUrl) . '</div>';
+                    }
+                @endphp
+            </div>
+            @else
+            <div class="qr-code-placeholder"></div>
+            @endif
+        </div>
+        <div class="signature-box" style="text-align: center;">
+            <div class="signature-label">إمضاء الرئيس المباشر</div>
+            <div class="signature-checkbox">
+                <input type="checkbox" checked disabled> علامة موافقة بمثابة التوقيع إلكتروني
+            </div>
+        </div>
+        <div class="signature-box" style="text-align: left;">
+            <div class="signature-label">إمضاء النائب</div>
+        </div>
     </div>
 
-    <div class="footer">
-        <p>Document généré automatiquement le {{ \Carbon\Carbon::now()->format('d/m/Y à H:i') }}</p>
-        <p>Ce document certifie que l'avis de retour a été validé par le chef hiérarchique.</p>
+    <div class="date-section">
+        <div>... {{ \Carbon\Carbon::parse($avisRetour->created_at)->format('d-m-Y') }} ...</div>
     </div>
 </body>
 </html>
-
-
-
-
-
-
