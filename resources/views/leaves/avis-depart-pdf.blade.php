@@ -137,8 +137,18 @@
 <body>
     <div class="header">
         @php
-            $logoPath = public_path('images/anef.png');
-            $logoData = file_exists($logoPath) ? 'data:image/png;base64,' . base64_encode(file_get_contents($logoPath)) : '';
+            $logoData = '';
+            try {
+                if (extension_loaded('gd')) {
+                    $logoPath = public_path('images/anef.png');
+                    if (file_exists($logoPath)) {
+                        $logoData = 'data:image/png;base64,' . base64_encode(file_get_contents($logoPath));
+                    }
+                }
+            } catch (\Exception $e) {
+                // Skip logo if there's an error
+                $logoData = '';
+            }
         @endphp
         @if($logoData)
         <img src="{{ $logoData }}" alt="ANEF Logo" class="logo">
@@ -239,11 +249,20 @@
             <div class="qr-code">
                 @php
                     try {
-                        // Generate QR code as SVG (works without GD extension)
-                        echo QrCode::size(80)->format('svg')->generate($verificationUrl);
+                        // Check if GD extension is available
+                        if (extension_loaded('gd')) {
+                            // Generate QR code as SVG (works better with DomPDF)
+                            $qrSvg = QrCode::size(80)->format('svg')->generate($verificationUrl);
+                            // Convert SVG to data URI to avoid file system issues
+                            $qrDataUri = 'data:image/svg+xml;base64,' . base64_encode($qrSvg);
+                            echo '<img src="' . $qrDataUri . '" alt="QR Code" style="width:80px;height:80px;" />';
+                        } else {
+                            // If GD is not available, show URL as text
+                            echo '<div style="text-align:center;font-size:8pt;word-break:break-all;padding:10px;">' . htmlspecialchars($verificationUrl) . '</div>';
+                        }
                     } catch (\Exception $e) {
                         // If QR code generation fails, show URL as text
-                        echo '<div style="text-align:center;font-size:8pt;word-break:break-all;">' . htmlspecialchars($verificationUrl) . '</div>';
+                        echo '<div style="text-align:center;font-size:8pt;word-break:break-all;padding:10px;">' . htmlspecialchars($verificationUrl) . '</div>';
                     }
                 @endphp
             </div>

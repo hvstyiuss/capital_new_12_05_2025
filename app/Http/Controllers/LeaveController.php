@@ -1307,9 +1307,15 @@ class LeaveController extends Controller
                     abort(404, 'Demande ou utilisateur introuvable.');
                 }
                 
+                // Ensure user has necessary relationships loaded for PDF generation
+                $user = $demande->user;
+                if (!$user->relationLoaded('userInfo')) {
+                    $user->load('userInfo.grade');
+                }
+                
                 // Generate PDF with error handling
                 try {
-                    $pdfPath = $this->pdfService->generateAvisDepartPDF($avisDepart, $demande->user);
+                    $pdfPath = $this->pdfService->generateAvisDepartPDF($avisDepart, $user);
                     $avisDepart->update(['pdf_path' => $pdfPath]);
                 } catch (\Exception $e) {
                     \Log::error('Error generating avis de départ PDF in download: ' . $e->getMessage(), [
@@ -1394,12 +1400,18 @@ class LeaveController extends Controller
                     abort(404, 'Demande ou utilisateur introuvable.');
                 }
                 
+                // Ensure user has necessary relationships loaded for PDF generation
+                $user = $demande->user;
+                if (!$user->relationLoaded('userInfo')) {
+                    $user->load('userInfo.grade');
+                }
+                
                 // Get avis de départ for PDF generation
                 $avisDepart = $avis ? $avis->avisDepart : null;
                 
                 // Generate PDF with error handling
                 try {
-                    $pdfPath = $this->pdfService->generateAvisRetourPDF($avisRetour, $demande->user, $avisDepart);
+                    $pdfPath = $this->pdfService->generateAvisRetourPDF($avisRetour, $user, $avisDepart);
                     $avisRetour->update(['pdf_path' => $pdfPath]);
                 } catch (\Exception $e) {
                     \Log::error('Error generating avis de retour PDF in download: ' . $e->getMessage(), [
@@ -1676,6 +1688,12 @@ class LeaveController extends Controller
         }
 
         $user = $demande->user;
+        
+        // Ensure user has necessary relationships loaded for PDF generation
+        if (!$user->relationLoaded('userInfo')) {
+            $user->load('userInfo.grade');
+        }
+        
         $avisDepart = $avis ? $avis->avisDepart : null;
         $currentUser = Auth::user();
         
