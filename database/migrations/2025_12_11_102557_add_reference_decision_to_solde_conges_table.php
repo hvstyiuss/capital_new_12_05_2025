@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::table('solde_conges', function (Blueprint $table) {
             // Add reference_decision column if it doesn't exist
             if (!Schema::hasColumn('solde_conges', 'reference_decision')) {
-                $table->string('reference_decision')->nullable()->after('type');
+                $table->string('reference_decision')->nullable();
             }
         });
     }

@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Solde actuel de mes agents')
+@section('title', 'Solde Actuel de mes Agents')
 
 @section('content')
 <div class="container-fluid px-4 py-4">
@@ -9,7 +9,7 @@
         <div class="d-flex justify-content-between align-items-center">
             <h1 class="h3 mb-0 text-gray-800">
                 <i class="fas fa-wallet me-2"></i>
-                Solde actuel de mes agents
+                Solde Actuel de mes Agents
             </h1>
             <div>
                 <a href="{{ route('dashboard') }}" class="btn btn-outline-secondary">

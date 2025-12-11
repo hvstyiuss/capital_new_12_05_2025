@@ -8,6 +8,7 @@ use App\Models\User;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
+use Dompdf\Options;
 
 class LeavePDFService
 {
@@ -43,9 +44,13 @@ class LeavePDFService
             if (Schema::hasColumn('avis_departs', 'verification_code') && $avisDepart->verification_code) {
                 $verificationUrl = url('/verification/resultat1.php?code_verification=' . $avisDepart->verification_code);
             }
+            // Setting Options to force Arabic font
+            $options = new Options();
+            $options->set('isRemoteEnabled', true);
+            $options->set('defaultFont', 'amiri');
             
             // Generate PDF from blade template
-            $pdf = Pdf::loadView('leaves.avis-depart-pdf', [
+            $pdf = Pdf::setOptions($options)->loadView('leaves.avis-depart-pdf', [
                 'avisDepart' => $avisDepart,
                 'user' => $user,
                 'demande' => $demande,
@@ -70,7 +75,7 @@ class LeavePDFService
             }
 
             // Save PDF to storage
-            $saved = Storage::disk('public')->put($path, $pdfOutput);
+            // $saved = Storage::disk('public')->put($path, $pdfOutput);
             
             if (!$saved) {
                 throw new \Exception('Impossible d\'enregistrer le PDF dans le stockage.');
@@ -125,9 +130,13 @@ class LeavePDFService
             if (Schema::hasColumn('avis_retours', 'verification_code') && $avisRetour->verification_code) {
                 $verificationUrl = url('/verification/resultat1.php?code_verification=' . $avisRetour->verification_code);
             }
+            // Setting Options to force Arabic font
+            $options = new Options();
+            $options->set('isRemoteEnabled', true);
+            $options->set('defaultFont', 'amiri');
             
             // Generate PDF from blade template
-            $pdf = Pdf::loadView('leaves.avis-retour-pdf', [
+            $pdf = Pdf::setOptions($options)->loadView('leaves.avis-retour-pdf', [
                 'avisRetour' => $avisRetour,
                 'user' => $user,
                 'avisDepart' => $avisDepart,
@@ -153,7 +162,7 @@ class LeavePDFService
             }
 
             // Save PDF to storage
-            $saved = Storage::disk('public')->put($path, $pdfOutput);
+            // $saved = Storage::disk('public')->put($path, $pdfOutput);
             
             if (!$saved) {
                 throw new \Exception('Impossible d\'enregistrer le PDF dans le stockage.');
@@ -215,9 +224,13 @@ class LeavePDFService
         if (!$avisDepart && $avis) {
             $avisDepart = $avis->avisDepart;
         }
-        
+        // Setting Options to force Arabic font
+            $options = new Options();
+            $options->set('isRemoteEnabled', true);
+            $options->set('defaultFont', 'amiri');
+                        
         // Generate PDF from blade template
-        $pdf = Pdf::loadView('leaves.explanation-pdf', [
+        $pdf = Pdf::setOptions($options)->loadView('leaves.explanation-pdf', [
             'avisRetour' => $avisRetour,
             'user' => $user,
             'avisDepart' => $avisDepart,
@@ -235,7 +248,7 @@ class LeavePDFService
         Storage::disk('public')->makeDirectory('pdfs/explanations');
 
         // Save PDF to storage
-        Storage::disk('public')->put($path, $pdf->output());
+        // Storage::disk('public')->put($path, $pdf->output());
 
         return $path;
     }

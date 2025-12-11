@@ -8,9 +8,7 @@
     <div class="mb-4">
         <div class="d-flex justify-content-between align-items-center flex-wrap">
             <div class="d-flex align-items-center gap-3 mb-2">
-                <div class="bg-gradient-primary rounded-circle p-3 shadow-sm">
-                    <i class="fas fa-calendar-alt text-white fs-4"></i>
-                </div>
+                
                 <div>
                     <h1 class="h3 mb-0 fw-bold text-dark">Détails de la Demande de Congé</h1>
                     <p class="text-muted mb-0 small">Demande #{{ $demande->id }}</p>

@@ -209,7 +209,7 @@
                             <div><i class="fas fa-clock me-1"></i><strong>Nombre de jours consommés:</strong> {{ $nbrJoursConsumes }} jour(s)</div>
                         </div>
                     </div>
-                    <a href="{{ route('hr.leaves.agents', ['statut' => 'pending']) }}" class="btn btn-info btn-sm ms-3">
+                    <a href="{{ route('hr.leaves.agents') }}" class="btn btn-info btn-sm ms-3">
                         <i class="fas fa-eye me-1"></i>Voir les détails
                     </a>
                 </div>

@@ -60,6 +60,9 @@
                 <a class="submenu-item {{ request()->routeIs('leaves.tracking') ? 'active' : '' }}" href="{{ route('leaves.tracking') }}">
                     <i class="fas fa-list-alt"></i> <span>Suivi mes Demandes</span>
                 </a>
+                <a class="submenu-item {{ request()->routeIs('hr.leaves.annuel') ? 'active' : '' }}" href="{{ route('hr.leaves.annuel') }}">
+                    <i class="fas fa-list-alt"></i> <span>Mon Solde Annuel</span>
+                </a>
                 @php
                     $isChef = auth()->user()->isChef() ?? false;
                 @endphp
@@ -68,7 +71,7 @@
                     <i class="fas fa-clipboard-list"></i> <span>Suivi de demandes de mes agents</span>
                 </a>
                 <a class="submenu-item {{ request()->routeIs('hr.leaves.agents-solde') ? 'active' : '' }}" href="{{ route('hr.leaves.agents-solde') }}">
-                    <i class="fas fa-wallet"></i> <span>Solde actuel de mes agents</span>
+                    <i class="fas fa-wallet"></i> <span>Solde Actuel de mes Agents</span>
                 </a>
                 @endif
                 @if(auth()->user()->hasRole('admin'))

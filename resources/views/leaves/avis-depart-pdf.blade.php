@@ -12,13 +12,14 @@
             margin: 20mm;
         }
         body {
-            font-family: 'Arial', 'DejaVu Sans', sans-serif;
+            font-family: 'amiri', sans-serif !important;
             margin: 0;
             padding: 0;
             color: #000;
             font-size: 12pt;
             direction: rtl;
         }
+
         .header {
             text-align: center;
             margin-bottom: 20px;
