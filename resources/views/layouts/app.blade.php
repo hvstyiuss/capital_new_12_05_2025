@@ -395,12 +395,240 @@
 
         .notification-badge {
             position: absolute;
-            top: 0.25rem;
-            right: 0.25rem;
-            width: 0.5rem;
-            height: 0.5rem;
+            top: -0.25rem;
+            right: -0.25rem;
+            min-width: 1.25rem;
+            height: 1.25rem;
             background: #ef4444;
-            border-radius: 50%;
+            color: white;
+            border-radius: 0.75rem;
+            font-size: 0.7rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 0.375rem;
+            border: 2px solid white;
+        }
+
+        .notification-dropdown-wrapper {
+            position: relative;
+            display: inline-block;
+        }
+
+        .notification-dropdown-panel {
+            position: absolute;
+            top: calc(100% + 0.5rem);
+            right: 0;
+            width: 380px;
+            max-height: 500px;
+            background: white;
+            border-radius: 0.5rem;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+            z-index: 1050;
+            overflow: hidden;
+            display: none;
+            flex-direction: column;
+        }
+
+        .notification-dropdown-panel.show {
+            display: flex;
+        }
+
+        .notification-dropdown-header {
+            padding: 1rem;
+            border-bottom: 1px solid #e5e7eb;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #f9fafb;
+        }
+
+        .notification-dropdown-header h6 {
+            margin: 0;
+            color: #1f2937;
+            font-size: 0.875rem;
+        }
+
+        .btn-mark-all-read {
+            background: transparent;
+            border: none;
+            color: #6b7280;
+            cursor: pointer;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            font-size: 0.875rem;
+            transition: all 0.2s;
+        }
+
+        .btn-mark-all-read:hover {
+            background: #e5e7eb;
+            color: #374151;
+        }
+
+        .notification-dropdown-list {
+            overflow-y: auto;
+            max-height: 400px;
+        }
+
+        .notification-dropdown-item {
+            padding: 1rem;
+            border-bottom: 1px solid #f3f4f6;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 0.75rem;
+            transition: background 0.2s;
+        }
+
+        .notification-dropdown-item:hover {
+            background: #f9fafb;
+        }
+
+        .notification-dropdown-item.unread {
+            background: #eff6ff;
+        }
+
+        .notification-dropdown-item.unread:hover {
+            background: #dbeafe;
+        }
+
+        .notification-dropdown-content {
+            display: flex;
+            gap: 0.75rem;
+            flex: 1;
+            min-width: 0;
+        }
+
+        .notification-dropdown-icon {
+            width: 2.5rem;
+            height: 2.5rem;
+            border-radius: 0.5rem;
+            background: #f3f4f6;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #6b7280;
+            flex-shrink: 0;
+        }
+
+        .notification-dropdown-item.unread .notification-dropdown-icon {
+            background: #dbeafe;
+            color: #2563eb;
+        }
+
+        .notification-dropdown-text {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .notification-dropdown-title {
+            font-weight: 600;
+            font-size: 0.875rem;
+            color: #1f2937;
+            margin-bottom: 0.25rem;
+        }
+
+        .notification-dropdown-message {
+            font-size: 0.8125rem;
+            color: #6b7280;
+            margin-bottom: 0.375rem;
+            line-height: 1.4;
+            word-wrap: break-word;
+        }
+
+        .notification-dropdown-time {
+            font-size: 0.75rem;
+            color: #9ca3af;
+        }
+
+        .notification-dropdown-actions {
+            display: flex;
+            gap: 0.25rem;
+            flex-shrink: 0;
+        }
+
+        .btn-notification-action {
+            width: 2rem;
+            height: 2rem;
+            border: none;
+            background: transparent;
+            border-radius: 0.25rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #6b7280;
+            transition: all 0.2s;
+        }
+
+        .btn-notification-action:hover {
+            background: #e5e7eb;
+        }
+
+        .btn-notification-action.btn-read:hover {
+            color: #2563eb;
+            background: #dbeafe;
+        }
+
+        .btn-notification-action.btn-delete:hover {
+            color: #dc2626;
+            background: #fee2e2;
+        }
+
+        .notification-dropdown-empty {
+            padding: 3rem 1rem;
+            text-align: center;
+            color: #9ca3af;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .notification-dropdown-empty i {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            opacity: 0.3;
+            color: #d1d5db;
+        }
+
+        .notification-dropdown-empty p {
+            color: #9ca3af;
+            font-size: 0.875rem;
+        }
+
+        .notification-dropdown-footer {
+            padding: 0.75rem 1rem;
+            border-top: 1px solid #e5e7eb;
+            background: #f9fafb;
+            text-align: center;
+        }
+
+        .notification-view-all {
+            color: #2563eb;
+            text-decoration: none;
+            font-size: 0.875rem;
+            font-weight: 500;
+            transition: color 0.2s;
+        }
+
+        .notification-view-all:hover {
+            color: #1d4ed8;
+        }
+
+        @media (max-width: 640px) {
+            .notification-dropdown-panel {
+                width: calc(100vw - 2rem);
+                max-width: 320px;
+                right: 0;
+            }
+        }
+
+        /* Ensure dropdown is above other content */
+        .top-header-right {
+            position: relative;
+            z-index: 100;
         }
 
         .user-profile {
@@ -516,17 +744,70 @@
                 </div>
                 
                 <div class="top-header-right">
-                    <!-- Notifications -->
-                    <button class="notification-icon-btn" onclick="toggleNotifications()">
+                    <!-- Notifications Dropdown -->
+                    <div class="notification-dropdown-wrapper">
+                    <button type="button" class="notification-icon-btn" onclick="toggleNotificationDropdown(event)" id="notificationDropdownBtn" aria-label="Notifications" aria-expanded="false">
                         <i class="fas fa-bell"></i>
-                        @php
-                            $user = auth()->user();
-                            $unreadCount = $user ? $user->notifications()->whereNull('read_at')->count() : 0;
-                        @endphp
-                        @if($unreadCount > 0)
-                            <span class="notification-badge"></span>
+                        @if($unreadNotificationCount > 0)
+                            <span class="notification-badge">{{ $unreadNotificationCount > 9 ? '9+' : $unreadNotificationCount }}</span>
                         @endif
                     </button>
+                        
+                        <div class="notification-dropdown-panel" id="notificationDropdownPanel">
+                            <div class="notification-dropdown-header">
+                                <h6 class="mb-0 fw-bold">Notifications</h6>
+                                @if($unreadNotificationCount > 0)
+                                    <button class="btn-mark-all-read" onclick="markAllNotificationsAsRead()" title="Marquer tout comme lu">
+                                        <i class="fas fa-check-double"></i>
+                                    </button>
+                                @endif
+                            </div>
+                            <div class="notification-dropdown-list">
+                                @if($recentNotifications->count() > 0)
+                                    @foreach($recentNotifications as $notification)
+                                        <div class="notification-dropdown-item {{ !$notification->read_at ? 'unread' : '' }}" data-notification-id="{{ $notification->id }}">
+                                            <div class="notification-dropdown-content">
+                                                <div class="notification-dropdown-icon">
+                                                    @if(isset($notification->data['icon']))
+                                                        <i class="{{ $notification->data['icon'] }}"></i>
+                                                    @else
+                                                        <i class="fas fa-bell"></i>
+                                                    @endif
+                                                </div>
+                                                <div class="notification-dropdown-text">
+                                                    <div class="notification-dropdown-title">{{ $notification->data['title'] ?? 'Notification' }}</div>
+                                                    <div class="notification-dropdown-message">{{ $notification->data['message'] ?? $notification->data['body'] ?? '' }}</div>
+                                                    <div class="notification-dropdown-time">{{ $notification->created_at->diffForHumans() }}</div>
+                                                </div>
+                                            </div>
+                                            <div class="notification-dropdown-actions">
+                                                @if(!$notification->read_at)
+                                                    <button class="btn-notification-action btn-read" onclick="markNotificationAsRead({{ $notification->id }})" title="Marquer comme lu">
+                                                        <i class="fas fa-check"></i>
+                                                    </button>
+                                                @endif
+                                                <button class="btn-notification-action btn-delete" onclick="deleteNotification({{ $notification->id }})" title="Supprimer">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    @endforeach
+                                @else
+                                    <div class="notification-dropdown-empty">
+                                        <i class="fas fa-bell-slash"></i>
+                                        <p class="mb-0 text-muted">Aucune notification</p>
+                                    </div>
+                                @endif
+                            </div>
+                            @if($recentNotifications->count() > 0)
+                                <div class="notification-dropdown-footer">
+                                    <a href="{{ route('notifications.index') }}" class="notification-view-all">
+                                        Voir toutes les notifications
+                                    </a>
+                                </div>
+                            @endif
+                        </div>
+                    </div>
                     
                     <!-- User menu -->
                     <div class="relative profile-dropdown-app">
@@ -537,7 +818,7 @@
                             @if($currentUser && $currentUser->image)
                                 <img src="{{ asset('storage/' . $currentUser->image) }}" alt="Profile" class="profile-pic">
                             @elseif($currentUser && $currentUser->userInfo && $currentUser->userInfo->photo)
-                                <img src="{{ asset('storage/' . $currentUser->userInfo->photo) }}" alt="Profile" class="profile-pic">
+                                <img src="{{ $currentUser->userInfo->photo_url }}" alt="Profile" class="profile-pic">
                             @else
                                 <img src="https://ui-avatars.com/api/?name={{ urlencode($currentUser->name ?? 'User') }}&background=059669&color=fff" alt="Profile" class="profile-pic">
                             @endif
@@ -657,8 +938,173 @@
             }
         });
 
-        function toggleNotifications() {
-            console.log('Toggle notifications');
+        function toggleNotificationDropdown(event) {
+            if (event) {
+                event.stopPropagation();
+            }
+            const panel = document.getElementById('notificationDropdownPanel');
+            const btn = document.getElementById('notificationDropdownBtn');
+            if (panel && btn) {
+                const isVisible = panel.classList.contains('show');
+                if (isVisible) {
+                    panel.classList.remove('show');
+                    btn.setAttribute('aria-expanded', 'false');
+                } else {
+                    panel.classList.add('show');
+                    btn.setAttribute('aria-expanded', 'true');
+                    // Close when clicking outside
+                    setTimeout(() => {
+                        const closeDropdown = function(e) {
+                            const wrapper = document.querySelector('.notification-dropdown-wrapper');
+                            if (wrapper && !wrapper.contains(e.target) && e.target !== btn && !btn.contains(e.target)) {
+                                panel.classList.remove('show');
+                                btn.setAttribute('aria-expanded', 'false');
+                                document.removeEventListener('click', closeDropdown);
+                            }
+                        };
+                        document.addEventListener('click', closeDropdown);
+                    }, 100);
+                }
+            }
+        }
+
+        function markNotificationAsRead(notificationId) {
+            fetch(`/notifications/${notificationId}/read`, {
+                method: 'PATCH',
+                headers: {
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                    'Content-Type': 'application/json',
+                },
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    const notificationItem = document.querySelector(`[data-notification-id="${notificationId}"]`);
+                    if (notificationItem) {
+                        notificationItem.classList.remove('unread');
+                        const readBtn = notificationItem.querySelector('.btn-read');
+                        if (readBtn) {
+                            readBtn.remove();
+                        }
+                        // Update badge count
+                        updateNotificationBadge(data.unread_count || 0);
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Erreur lors du marquage de la notification comme lue.');
+            });
+        }
+
+        function deleteNotification(notificationId) {
+            if (!confirm('Êtes-vous sûr de vouloir supprimer cette notification ?')) {
+                return;
+            }
+
+            fetch(`/notifications/${notificationId}`, {
+                method: 'DELETE',
+                headers: {
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                },
+            })
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(data => {
+                        throw new Error(data.message || 'Erreur lors de la suppression de la notification.');
+                    });
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    const notificationItem = document.querySelector(`[data-notification-id="${notificationId}"]`);
+                    if (notificationItem) {
+                        notificationItem.style.transition = 'opacity 0.3s ease';
+                        notificationItem.style.opacity = '0';
+                        setTimeout(() => {
+                            notificationItem.remove();
+                            // Check if list is empty
+                            const list = document.querySelector('.notification-dropdown-list');
+                            if (list && list.children.length === 0) {
+                                list.innerHTML = `
+                                    <div class="notification-dropdown-empty">
+                                        <i class="fas fa-bell-slash"></i>
+                                        <p class="mb-0 text-muted">Aucune notification</p>
+                                    </div>
+                                `;
+                            }
+                        }, 300);
+                    }
+                    // Update badge count
+                    updateNotificationBadge(data.unread_count || 0);
+                } else {
+                    alert(data.message || 'Erreur lors de la suppression de la notification.');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert(error.message || 'Erreur lors de la suppression de la notification.');
+            });
+        }
+
+        function markAllNotificationsAsRead() {
+            fetch('/notifications/mark-all-read', {
+                method: 'PATCH',
+                headers: {
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                    'Content-Type': 'application/json',
+                },
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Remove unread class from all items
+                    document.querySelectorAll('.notification-dropdown-item.unread').forEach(item => {
+                        item.classList.remove('unread');
+                        const readBtn = item.querySelector('.btn-read');
+                        if (readBtn) {
+                            readBtn.remove();
+                        }
+                    });
+                    // Remove mark all read button
+                    const markAllBtn = document.querySelector('.btn-mark-all-read');
+                    if (markAllBtn) {
+                        markAllBtn.remove();
+                    }
+                    // Update badge
+                    updateNotificationBadge(0);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Erreur lors du marquage de toutes les notifications comme lues.');
+            });
+        }
+
+        function updateNotificationBadge(count) {
+            const badge = document.querySelector('.notification-badge');
+            if (count > 0) {
+                if (badge) {
+                    badge.textContent = count > 9 ? '9+' : count;
+                    badge.style.display = 'flex';
+                } else {
+                    // Create badge if it doesn't exist
+                    const btn = document.getElementById('notificationDropdownBtn');
+                    if (btn) {
+                        const newBadge = document.createElement('span');
+                        newBadge.className = 'notification-badge';
+                        newBadge.textContent = count > 9 ? '9+' : count;
+                        btn.appendChild(newBadge);
+                    }
+                }
+            } else {
+                if (badge) {
+                    badge.remove();
+                }
+            }
         }
 
         function toggleSubmenu(element) {

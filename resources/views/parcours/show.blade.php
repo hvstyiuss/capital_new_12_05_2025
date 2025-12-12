@@ -24,7 +24,7 @@
                 <div class="col-md-8">
                     <div class="d-flex align-items-center">
                         @if($user->userInfo && $user->userInfo->photo)
-                            <img src="{{ asset('storage/' . $user->userInfo->photo) }}" 
+                            <img src="{{ $user->userInfo->photo_url }}" 
                                  alt="{{ $user->fname }} {{ $user->lname }}" 
                                  class="rounded-circle me-3" 
                                  style="width: 80px; height: 80px; object-fit: cover;">
@@ -32,7 +32,7 @@
                             <div class="rounded-circle bg-primary bg-opacity-10 d-flex align-items-center justify-content-center me-3" 
                                  style="width: 80px; height: 80px;">
                                 <span class="text-primary fw-bold" style="font-size: 2rem;">
-                                    {{ strtoupper(substr($user->fname ?? 'U', 0, 1)) }}{{ strtoupper(substr($user->lname ?? '', 0, 1)) }}
+                                    {{ $user->initials ?? 'U' }}
                                 </span>
                             </div>
                         @endif
@@ -44,17 +44,10 @@
                                     <span class="ms-2">{{ $user->email }}</span>
                                 @endif
                             </p>
-                            @php
-                                $currentParcours = $parcours->where('date_fin', null)->first() 
-                                    ?? $parcours->where('date_fin', '>=', now())->first();
-                            @endphp
-                            @if($currentParcours)
+                            @if($currentParcours ?? null)
                                 <p class="mb-0">
                                     <span class="badge bg-success">Actuellement: {{ $currentParcours->entite->name ?? 'N/A' }}</span>
-                                    @php
-                                        $isCurrentChef = $currentParcours->entite && $currentParcours->entite->chef_ppr === $currentParcours->ppr;
-                                    @endphp
-                                    @if($isCurrentChef)
+                                    @if($isCurrentChef ?? false)
                                         <span class="badge bg-warning text-dark ms-2">
                                             <i class="fas fa-crown me-1"></i>Chef
                                         </span>
@@ -82,15 +75,10 @@
         <div class="card-body">
             @if($parcours->count() > 0)
                 <div class="timeline">
-                    @foreach($parcours as $index => $parcour)
-                        @php
-                            $isActive = $parcour->date_fin === null || $parcour->date_fin >= now();
-                            $isFirst = $index === 0;
-                            $isLast = $index === $parcours->count() - 1;
-                        @endphp
-                        <div class="timeline-item {{ $isActive ? 'active' : '' }}">
-                            <div class="timeline-marker {{ $isActive ? 'bg-success' : 'bg-secondary' }}">
-                                <i class="fas fa-{{ $isActive ? 'check-circle' : 'circle' }} text-white"></i>
+                    @foreach($parcours as $parcour)
+                        <div class="timeline-item {{ $parcour->isActive ? 'active' : '' }}">
+                            <div class="timeline-marker {{ $parcour->isActive ? 'bg-success' : 'bg-secondary' }}">
+                                <i class="fas fa-{{ $parcour->isActive ? 'check-circle' : 'circle' }} text-white"></i>
                             </div>
                             <div class="timeline-content">
                                 <div class="d-flex justify-content-between align-items-start mb-2">
@@ -103,7 +91,7 @@
                                         </p>
                                     </div>
                                     <div class="text-end">
-                                        @if($isActive)
+                                        @if($parcour->isActive)
                                             <span class="badge bg-success">
                                                 <i class="fas fa-check-circle me-1"></i>Actif
                                             </span>
@@ -116,12 +104,12 @@
                                 <div class="row g-2 mb-2">
                                     <div class="col-md-6">
                                         <small class="text-muted d-block">Date de début</small>
-                                        <span class="fw-semibold">{{ $parcour->date_debut ? $parcour->date_debut->format('d/m/Y') : 'N/A' }}</span>
+                                        <span class="fw-semibold">{{ $parcour->date_debut_formatted }}</span>
                                     </div>
                                     <div class="col-md-6">
                                         <small class="text-muted d-block">Date de fin</small>
-                                        @if($parcour->date_fin)
-                                            <span class="fw-semibold">{{ $parcour->date_fin->format('d/m/Y') }}</span>
+                                        @if($parcour->date_fin_formatted)
+                                            <span class="fw-semibold">{{ $parcour->date_fin_formatted }}</span>
                                         @else
                                             <span class="badge bg-success">En cours</span>
                                         @endif
@@ -143,17 +131,14 @@
                                 @endif
 
                                 <div class="d-flex gap-2 flex-wrap">
-                                    @php
-                                        $isChefParcours = $parcour->entite && $parcour->entite->chef_ppr === $parcour->ppr;
-                                    @endphp
-                                    @if($isChefParcours)
+                                    @if($parcour->isChefParcours)
                                         <span class="badge bg-warning text-dark">
                                             <i class="fas fa-crown me-1"></i>Chef
                                         </span>
                                     @endif
                                 </div>
 
-                                @if(!$isLast)
+                                @if(!$parcour->isLast)
                                     <div class="timeline-connector"></div>
                                 @endif
                             </div>

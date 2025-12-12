@@ -1,24 +1,18 @@
-@php
-    $user = auth()->user();
-    $recentNotifications = $user->notifications()->orderBy('created_at', 'desc')->limit(5)->get();
-    $unreadCount = $user->notifications()->whereNull('read_at')->count();
-@endphp
-
 <div class="notification-dropdown">
     <div class="dropdown">
         <button class="btn btn-link dropdown-toggle notification-toggle" type="button" id="notificationDropdown" 
                 data-bs-toggle="dropdown" aria-expanded="false">
             <i class="fas fa-bell"></i>
-            @if($unreadCount > 0)
-                <span class="notification-badge">{{ $unreadCount }}</span>
+            @if($unreadNotificationCount > 0)
+                <span class="notification-badge">{{ $unreadNotificationCount }}</span>
             @endif
         </button>
         
         <div class="dropdown-menu dropdown-menu-end notification-menu" aria-labelledby="notificationDropdown">
             <div class="notification-header">
                 <h6 class="mb-0">Notifications</h6>
-                @if($unreadCount > 0)
-                    <small class="text-muted">{{ $unreadCount }} non lue(s)</small>
+                @if($unreadNotificationCount > 0)
+                    <small class="text-muted">{{ $unreadNotificationCount }} non lue(s)</small>
                 @endif
             </div>
             
@@ -56,7 +50,7 @@
                 <a href="{{ route('notifications.index') }}" class="btn btn-outline-primary btn-sm">
                     Voir toutes les notifications
                 </a>
-                @if($unreadCount > 0)
+                @if($unreadNotificationCount > 0)
                     <button class="btn btn-outline-success btn-sm" onclick="markAllAsRead()">
                         Marquer tout comme lu
                     </button>

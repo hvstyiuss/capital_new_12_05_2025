@@ -6,9 +6,16 @@ use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Http\UploadedFile;
+use App\Services\ProfileImageService;
 
 class AccountSettingsService
 {
+    protected ProfileImageService $profileImageService;
+
+    public function __construct(ProfileImageService $profileImageService)
+    {
+        $this->profileImageService = $profileImageService;
+    }
     /**
      * Update user personal information.
      */
@@ -49,7 +56,7 @@ class AccountSettingsService
 
         // Handle image upload - store in user_infos.photo
         if ($image) {
-            $this->updateProfileImage($user, $image);
+            $this->profileImageService->uploadProfileImage($user, $image);
         }
         
         if (!empty($userInfoUpdate)) {
@@ -100,23 +107,7 @@ class AccountSettingsService
      */
     public function updateProfileImage(User $user, UploadedFile $image): string
     {
-        // Ensure userInfo exists
-        if (!$user->userInfo) {
-            $user->userInfo()->create(['ppr' => $user->ppr]);
-            $user->load('userInfo');
-        }
-
-        // Delete old image if exists
-        if ($user->userInfo->photo && Storage::disk('public')->exists($user->userInfo->photo)) {
-            Storage::disk('public')->delete($user->userInfo->photo);
-        }
-
-        // Store new image
-        $imagePath = $image->store('users', 'public');
-        $user->userInfo->update(['photo' => $imagePath]);
-        $user->load('userInfo');
-
-        return $imagePath;
+        return $this->profileImageService->uploadProfileImage($user, $image);
     }
 
     /**
@@ -124,20 +115,8 @@ class AccountSettingsService
      */
     public function deleteProfileImage(User $user): bool
     {
-        if (!$user->userInfo || !$user->userInfo->photo) {
-            return false;
-        }
-
-        // Delete image file
-        if (Storage::disk('public')->exists($user->userInfo->photo)) {
-            Storage::disk('public')->delete($user->userInfo->photo);
-        }
-
-        // Update userInfo to remove photo reference
-        $user->userInfo->update(['photo' => null]);
-        $user->load('userInfo');
-
-        return true;
+        return $this->profileImageService->deleteProfileImage($user);
     }
+
 }
 

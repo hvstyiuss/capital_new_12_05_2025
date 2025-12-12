@@ -108,20 +108,11 @@ class ValidateAvisRetourAction
             }
         }
         
-        // Generate PDF for avis de retour if not already generated
+        // Generate PDF for avis de retour (on-the-fly, not stored)
         if ($demandeUser && $generatePdfCallback) {
             try {
-                if (Schema::hasColumn('avis_retours', 'pdf_path')) {
-                    if (!$avisRetour->pdf_path) {
-                        $pdfPath = $generatePdfCallback($avisRetour, $demandeUser, $avisDepart);
-                        if ($pdfPath) {
-                            $avisRetour->update(['pdf_path' => $pdfPath]);
-                        }
-                    }
-                } else {
-                    // Column doesn't exist, generate PDF but don't save path
-                    $generatePdfCallback($avisRetour, $demandeUser, $avisDepart);
-                }
+                // Generate PDF but don't save path (PDFs are generated on-the-fly)
+                $generatePdfCallback($avisRetour, $demandeUser, $avisDepart);
             } catch (\Exception $e) {
                 // Log error but don't fail validation
                 \Log::error('Error generating avis retour PDF during validation: ' . $e->getMessage(), [
@@ -140,17 +131,8 @@ class ValidateAvisRetourAction
             // Check if actual return date is later than declared return date
             if ($dateRetourEffectif->greaterThan($dateRetourDeclaree) && $generateExplanationPdfCallback) {
                 try {
-                    if (Schema::hasColumn('avis_retours', 'explanation_pdf_path')) {
-                        if (!$avisRetour->explanation_pdf_path) {
-                            $explanationPdfPath = $generateExplanationPdfCallback($avisRetour, $demandeUser, $avisDepart);
-                            if ($explanationPdfPath) {
-                                $avisRetour->update(['explanation_pdf_path' => $explanationPdfPath]);
-                            }
-                        }
-                    } else {
-                        // Column doesn't exist, generate PDF but don't save path
-                        $generateExplanationPdfCallback($avisRetour, $demandeUser, $avisDepart);
-                    }
+                    // Generate PDF but don't save path (PDFs are generated on-the-fly)
+                    $generateExplanationPdfCallback($avisRetour, $demandeUser, $avisDepart);
                 } catch (\Exception $e) {
                     // Log error but don't fail validation
                     \Log::error('Error generating explanation PDF during validation: ' . $e->getMessage(), [

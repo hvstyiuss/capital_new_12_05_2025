@@ -94,15 +94,15 @@
         <h2 style="margin-top: 0; color: #0066cc;">Informations du Congé</h2>
         <div class="info-row">
             <span class="info-label">Date de Départ:</span>
-            <span class="info-value">{{ \Carbon\Carbon::parse($avisDepart->date_depart)->format('d/m/Y') }}</span>
+            <span class="info-value">{{ $avisDepart && $avisDepart->date_depart ? \Carbon\Carbon::parse($avisDepart->date_depart)->format('d/m/Y') : 'N/A' }}</span>
         </div>
         <div class="info-row">
             <span class="info-label">Date de Retour Prévue:</span>
-            <span class="info-value">{{ \Carbon\Carbon::parse($avisDepart->date_retour)->format('d/m/Y') }}</span>
+            <span class="info-value">{{ $avisDepart && $avisDepart->date_retour ? \Carbon\Carbon::parse($avisDepart->date_retour)->format('d/m/Y') : 'N/A' }}</span>
         </div>
         <div class="info-row">
             <span class="info-label">Date de Retour Déclarée:</span>
-            <span class="info-value">{{ \Carbon\Carbon::parse($avisRetour->date_retour_declaree)->format('d/m/Y') }}</span>
+            <span class="info-value">{{ $avisRetour && $avisRetour->date_retour_declaree ? \Carbon\Carbon::parse($avisRetour->date_retour_declaree)->format('d/m/Y') : 'N/A' }}</span>
         </div>
         <div class="info-row">
             <span class="info-label">Nombre de Jours Demandés:</span>
@@ -116,61 +116,34 @@
 
     <div class="warning-box">
         <h3>⚠️ Dérangement Détecté</h3>
-        @php
-            $dateRetourPrevue = \Carbon\Carbon::parse($avisDepart->date_retour);
-            $dateRetourDeclaree = \Carbon\Carbon::parse($avisRetour->date_retour_declaree);
-            $dateDepart = \Carbon\Carbon::parse($avisDepart->date_depart);
-            
-            // Calculate expected days from departure to declared return date
-            $current = $dateDepart->copy();
-            $expectedDays = 0;
-            $holidays = \App\Models\JoursFerie::whereBetween('date', [$dateDepart, $dateRetourDeclaree])
-                ->pluck('date')
-                ->map(function($date) {
-                    return $date->format('Y-m-d');
-                })
-                ->toArray();
-            
-            while ($current->lte($dateRetourDeclaree)) {
-                $dateString = $current->format('Y-m-d');
-                if (!$current->isWeekend() && !in_array($dateString, $holidays)) {
-                    $expectedDays++;
-                }
-                $current->addDay();
-            }
-            
-            $isLateReturn = $dateRetourDeclaree->gt($dateRetourPrevue);
-            $isConsumptionExceeded = $avisRetour->nbr_jours_consumes > $expectedDays;
-        @endphp
-        
-        @if($isLateReturn && $isConsumptionExceeded)
+        @if(isset($explanationData) && $explanationData['isLateReturn'] && $explanationData['isConsumptionExceeded'])
             <p>
-                Vous avez déclaré votre retour le <strong>{{ $dateRetourDeclaree->format('d/m/Y') }}</strong>, 
-                alors que la date de retour prévue était le <strong>{{ $dateRetourPrevue->format('d/m/Y') }}</strong>.
+                Vous avez déclaré votre retour le <strong>{{ $explanationData['dateRetourDeclaree']->format('d/m/Y') }}</strong>, 
+                alors que la date de retour prévue était le <strong>{{ $explanationData['dateRetourPrevue']->format('d/m/Y') }}</strong>.
             </p>
             <p>
                 De plus, vous avez consommé <strong>{{ $avisRetour->nbr_jours_consumes }} jour(s)</strong>, 
-                alors que la période entre votre date de départ ({{ $dateDepart->format('d/m/Y') }}) 
-                et votre date de retour déclarée ({{ $dateRetourDeclaree->format('d/m/Y') }}) 
-                représente <strong>{{ $expectedDays }} jour(s) ouvrable(s)</strong>.
+                alors que la période entre votre date de départ ({{ $explanationData['dateDepart']->format('d/m/Y') }}) 
+                et votre date de retour déclarée ({{ $explanationData['dateRetourDeclaree']->format('d/m/Y') }}) 
+                représente <strong>{{ $explanationData['expectedDays'] }} jour(s) ouvrable(s)</strong>.
             </p>
             <p>
                 Conformément aux procédures en vigueur, nous vous demandons de bien vouloir nous fournir une explication détaillée concernant ce dépassement.
             </p>
-        @elseif($isConsumptionExceeded)
+        @elseif(isset($explanationData) && $explanationData['isConsumptionExceeded'])
             <p>
                 Vous avez consommé <strong>{{ $avisRetour->nbr_jours_consumes }} jour(s)</strong>, 
-                alors que la période entre votre date de départ ({{ $dateDepart->format('d/m/Y') }}) 
-                et votre date de retour déclarée ({{ $dateRetourDeclaree->format('d/m/Y') }}) 
-                représente <strong>{{ $expectedDays }} jour(s) ouvrable(s)</strong>.
+                alors que la période entre votre date de départ ({{ $explanationData['dateDepart']->format('d/m/Y') }}) 
+                et votre date de retour déclarée ({{ $explanationData['dateRetourDeclaree']->format('d/m/Y') }}) 
+                représente <strong>{{ $explanationData['expectedDays'] }} jour(s) ouvrable(s)</strong>.
             </p>
             <p>
                 Conformément aux procédures en vigueur, nous vous demandons de bien vouloir nous fournir une explication détaillée concernant ce dépassement de consommation.
             </p>
-        @else
+        @elseif(isset($explanationData) && $explanationData['isLateReturn'])
             <p>
-                Vous avez déclaré votre retour le <strong>{{ $dateRetourDeclaree->format('d/m/Y') }}</strong>, 
-                alors que la date de retour prévue était le <strong>{{ $dateRetourPrevue->format('d/m/Y') }}</strong>.
+                Vous avez déclaré votre retour le <strong>{{ $explanationData['dateRetourDeclaree']->format('d/m/Y') }}</strong>, 
+                alors que la date de retour prévue était le <strong>{{ $explanationData['dateRetourPrevue']->format('d/m/Y') }}</strong>.
             </p>
             <p>
                 Conformément aux procédures en vigueur, nous vous demandons de bien vouloir nous fournir une explication détaillée concernant ce retard.
@@ -182,7 +155,7 @@
         <strong>⏰ DÉLAI DE RÉPONSE: 48 HEURES</strong><br>
         <p style="margin: 10px 0 0 0;">
             Vous devez fournir votre explication avant le:<br>
-            <strong style="font-size: 20px;">{{ $deadline->format('d/m/Y à H:i') }}</strong>
+            <strong style="font-size: 20px;">{{ isset($deadline) ? $deadline->format('d/m/Y à H:i') : \Carbon\Carbon::now()->addHours(48)->format('d/m/Y à H:i') }}</strong>
         </p>
     </div>
 

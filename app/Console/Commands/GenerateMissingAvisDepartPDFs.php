@@ -7,6 +7,7 @@ use App\Models\AvisDepart;
 use App\Models\Demande;
 use App\Services\LeavePDFService;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class GenerateMissingAvisDepartPDFs extends Command
 {
@@ -31,12 +32,9 @@ class GenerateMissingAvisDepartPDFs extends Command
     {
         $this->info('Recherche des avis de départ approuvés sans PDF...');
 
-        // Get all approved avis de départ without PDF
+        // Get all approved avis de départ
+        // Note: PDFs are now generated on-the-fly, so we check for approved status only
         $avisDeparts = AvisDepart::where('statut', 'approved')
-            ->where(function($query) {
-                $query->whereNull('pdf_path')
-                      ->orWhere('pdf_path', '');
-            })
             ->with(['avis.demande.user'])
             ->get();
 
@@ -60,11 +58,15 @@ class GenerateMissingAvisDepartPDFs extends Command
                     continue;
                 }
 
-                // Generate PDF using service
-                $pdfPath = $pdfService->generateAvisDepartPDF($avisDepart, $demande->user);
-
-                // Update avis depart with PDF path
-                $avisDepart->update(['pdf_path' => $pdfPath]);
+                // Generate PDF using service (on-the-fly, no storage)
+                $pdf = $pdfService->generateAvisDepartPDF($avisDepart, $demande->user);
+                
+                // PDF is generated on-the-fly, no need to store path
+                // If pdf_path column exists and is needed, we can mark it as generated
+                if (Schema::hasColumn('avis_departs', 'pdf_path')) {
+                    // Mark as generated without storing actual path
+                    $avisDepart->update(['pdf_path' => 'generated']);
+                }
                 $generated++;
 
                 $this->info("PDF généré pour l'avis de départ #{$avisDepart->id} (PPR: {$demande->user->ppr})");

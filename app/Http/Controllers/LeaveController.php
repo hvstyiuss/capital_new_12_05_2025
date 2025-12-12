@@ -15,9 +15,11 @@ use App\Models\DemandeConge;
 use App\Models\CongeMaladie;
 use App\Models\TypeMaladie;
 use App\Models\TypeConge;
+use App\Models\Mutation;
 use App\Services\NotificationService;
 use App\Services\CongeService;
 use App\Services\LeavePDFService;
+use App\Services\StatusHelperService;
 use App\Mail\LeaveRequestNotification;
 use App\Actions\AvisDepart\ValidateAvisDepartAction;
 use App\Actions\AvisDepart\RejectAvisDepartAction;
@@ -30,7 +32,6 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Carbon\Carbon;
 use DomainException;
-use Barryvdh\DomPDF\Facade\Pdf;
 
 class LeaveController extends Controller
 {
@@ -195,92 +196,56 @@ class LeaveController extends Controller
         $perPage = $request->get('per_page', 15);
         $demandes = $query->orderBy('created_at', 'desc')->paginate($perPage);
         
-        // Transform demandes for the view
+        // Transform demandes using ViewModel
         $transformedItems = $demandes->getCollection()->map(function($demande) {
-            $avis = $demande->avis;
-            $avisDepart = $avis ? $avis->avisDepart : null;
-            $avisRetour = $avis ? $avis->avisRetour : null;
-            
-            // Get type demande
-            $typeDemande = 'Congé Administratif Annuel';
-            if ($demande->demandeConge && $demande->demandeConge->typeConge) {
-                $typeDemande = $demande->demandeConge->typeConge->name;
-            }
-            
-            // Get statut from avis de départ
-            $statut = 'pending';
-            if ($avisDepart) {
-                $statut = $avisDepart->statut;
-            }
-            
-            // Get statut labels
-            $avisDepartStatutLabel = match($statut) {
-                'pending' => 'En attente',
-                'approved' => 'Approuvé',
-                'rejected' => 'Rejeté',
-                default => 'En attente',
-            };
-            
-            $avisRetourStatut = $avisRetour ? $avisRetour->statut : null;
-            $avisRetourStatutLabel = match($avisRetourStatut) {
-                'pending' => 'En attente',
-                'approved' => 'Approuvé',
-                'rejected' => 'Rejeté',
-                default => null,
-            };
-            
-            // Create object-like structure for the view
-            return (object) [
-                'id' => $demande->id,
-                'ppr' => $demande->ppr,
-                'user_name' => $demande->user ? ($demande->user->fname . ' ' . $demande->user->lname) : 'N/A',
-                'type_demande' => $typeDemande,
-                'date_depot' => $demande->created_at,
-                'statut' => $statut,
-                'nbr_jours' => $avisDepart ? ($avisDepart->nb_jours_demandes ?? 0) : 0,
-                'date_debut' => $avisDepart ? $avisDepart->date_depart : ($demande->date_debut ?? null),
-                'date_depart' => $avisDepart ? $avisDepart->date_depart : null,
-                'date_retour' => $avisDepart ? $avisDepart->date_retour : null,
-                'avis_depart_statut' => $statut,
-                'avis_depart_statut_label' => $avisDepartStatutLabel,
-                'avis_depart_id' => $avisDepart ? $avisDepart->id : null,
-                'avis_depart_pdf_path' => $avisDepart ? $avisDepart->pdf_path : null,
-                'nbr_jours_consommes' => $avisRetour ? ($avisRetour->nbr_jours_consumes ?? 0) : 0,
-                'date_retour_declaree' => $avisRetour ? $avisRetour->date_retour_declaree : null,
-                'date_retour_effectif' => $avisRetour ? $avisRetour->date_retour_effectif : null,
-                'avis_retour_statut' => $avisRetourStatut,
-                'avis_retour_statut_label' => $avisRetourStatutLabel,
-                'avis_retour_id' => $avisRetour ? $avisRetour->id : null,
-                'avis_retour_pdf_path' => $avisRetour ? $avisRetour->pdf_path : null,
-                'avis_retour_date_depot' => $avisRetour ? ($avisRetour->created_at ?? ($avis ? $avis->date_depot : null)) : null,
-                'explanation_pdf_path' => $avisRetour ? $avisRetour->explanation_pdf_path : null,
-                'consumption_exceeds' => $avisRetour && $avisRetour->date_retour_declaree && $avisRetour->date_retour_effectif 
-                    ? Carbon::parse($avisRetour->date_retour_effectif)->greaterThan(Carbon::parse($avisRetour->date_retour_declaree))
-                    : false,
-                'avis_depart' => $avisDepart ? (object) [
-                    'id' => $avisDepart->id,
-                    'statut' => $avisDepart->statut,
-                    'date_depart' => $avisDepart->date_depart,
-                    'date_retour' => $avisDepart->date_retour,
-                    'nb_jours_demandes' => $avisDepart->nb_jours_demandes ?? 0,
-                    'pdf_path' => $avisDepart->pdf_path ?? null,
-                ] : null,
-                'avis_retour' => $avisRetour ? (object) [
-                    'id' => $avisRetour->id,
-                    'statut' => $avisRetour->statut,
-                    'nbr_jours_consommes' => $avisRetour->nbr_jours_consumes ?? 0,
-                    'date_retour_declaree' => $avisRetour->date_retour_declaree,
-                    'date_retour_effectif' => $avisRetour->date_retour_effectif,
-                    'pdf_path' => $avisRetour->pdf_path ?? null,
-                    'explanation_pdf_path' => $avisRetour->explanation_pdf_path ?? null,
-                ] : null,
-            ];
+            return new \App\ViewModels\LeaveDemandeViewModel($demande);
         });
         
         // Replace the collection with transformed items
         $demandes->setCollection($transformedItems);
         
-        return view('leaves.agents', compact('demandes'));
+        // Prepare filter data
+        $filterData = [
+            'currentStatut' => $statut,
+            'currentYear' => $year,
+            'currentMonth' => $month,
+        ];
+        
+        // Get leave statistics for agents
+        $leaveStats = [
+            'total' => Demande::whereIn('ppr', $agentPprs)
+                ->whereHas('avis.avisDepart')
+                ->count(),
+            'pending' => Demande::whereIn('ppr', $agentPprs)
+                ->whereHas('avis.avisDepart', function($query) {
+                    $query->where('statut', 'pending');
+                })
+                ->count(),
+            'approved' => Demande::whereIn('ppr', $agentPprs)
+                ->whereHas('avis.avisDepart', function($query) {
+                    $query->where('statut', 'approved');
+                })
+                ->count(),
+            'rejected' => Demande::whereIn('ppr', $agentPprs)
+                ->whereHas('avis.avisDepart', function($query) {
+                    $query->where('statut', 'rejected');
+                })
+                ->count(),
+        ];
+        
+        return view('leaves.agents', compact('demandes', 'filterData', 'leaveStats'));
+    }
+
+    /**
+     * Get months array in French
+     */
+    private function getMonthsArray(): array
+    {
+        return [
+            1 => 'Janvier', 2 => 'Février', 3 => 'Mars', 4 => 'Avril',
+            5 => 'Mai', 6 => 'Juin', 7 => 'Juillet', 8 => 'Août',
+            9 => 'Septembre', 10 => 'Octobre', 11 => 'Novembre', 12 => 'Décembre'
+        ];
     }
 
     /**
@@ -372,6 +337,37 @@ class LeaveController extends Controller
                 default => null,
             };
             
+            // Calculate badge classes
+            $avisDepartBadgeClass = StatusHelperService::getBadgeClass($statut);
+            $avisRetourBadgeClass = StatusHelperService::getBadgeClass($avisRetourStatut);
+            
+            // Calculate consumption_exceeds
+            $consumptionExceeds = false;
+            if ($avisRetour && $avisRetour->date_retour_declaree && $avisDepart && $avisDepart->date_depart) {
+                $dateDepart = Carbon::parse($avisDepart->date_depart);
+                $dateRetourDeclaree = Carbon::parse($avisRetour->date_retour_declaree);
+                
+                // Calculate expected working days
+                $current = $dateDepart->copy();
+                $expectedDays = 0;
+                $holidays = JoursFerie::whereBetween('date', [$dateDepart, $dateRetourDeclaree])
+                    ->pluck('date')
+                    ->map(function($date) {
+                        return $date->format('Y-m-d');
+                    })
+                    ->toArray();
+                
+                while ($current->lte($dateRetourDeclaree)) {
+                    $dateString = $current->format('Y-m-d');
+                    if (!$current->isWeekend() && !in_array($dateString, $holidays)) {
+                        $expectedDays++;
+                    }
+                    $current->addDay();
+                }
+                
+                $consumptionExceeds = $avisRetour->nbr_jours_consumes > $expectedDays;
+            }
+            
             // Create object-like structure for the view
             return (object) [
                 'id' => $demande->id,
@@ -386,6 +382,7 @@ class LeaveController extends Controller
                 'date_retour' => $avisDepart ? $avisDepart->date_retour : null,
                 'avis_depart_statut' => $statut,
                 'avis_depart_statut_label' => $avisDepartStatutLabel,
+                'avis_depart_badge_class' => $avisDepartBadgeClass,
                 'avis_depart_id' => $avisDepart ? $avisDepart->id : null,
                 'avis_depart_pdf_path' => $avisDepart ? $avisDepart->pdf_path : null,
                 'nbr_jours_consommes' => $avisRetour ? ($avisRetour->nbr_jours_consumes ?? 0) : 0,
@@ -393,11 +390,13 @@ class LeaveController extends Controller
                 'date_retour_effectif' => $avisRetour ? $avisRetour->date_retour_effectif : null,
                 'avis_retour_statut' => $avisRetourStatut,
                 'avis_retour_statut_label' => $avisRetourStatutLabel,
+                'avis_retour_badge_class' => $avisRetourBadgeClass,
                 'avis_retour_id' => $avisRetour ? $avisRetour->id : null,
                 'avis_retour_pdf_path' => $avisRetour ? $avisRetour->pdf_path : null,
                 'avis_retour_date_depot' => $avisRetour ? ($avisRetour->created_at ?? ($avis ? $avis->date_depot : null)) : null,
                 'explanation_pdf_path' => $avisRetour ? $avisRetour->explanation_pdf_path : null,
-                'consumption_exceeds' => false,
+                'consumption_exceeds' => $consumptionExceeds,
+                'consumption_icon_color' => $consumptionExceeds ? '#dc3545' : '#6c757d',
                 'avis_depart' => $avisDepart ? (object) [
                     'id' => $avisDepart->id,
                     'statut' => $avisDepart->statut,
@@ -421,7 +420,9 @@ class LeaveController extends Controller
         // Replace the collection with transformed items
         $demandes->setCollection($transformedItems);
         
-        return view('leaves.central', compact('demandes', 'statut', 'year', 'month', 'perPage'));
+        $months = $this->getMonthsArray();
+        
+        return view('leaves.central', compact('demandes', 'statut', 'year', 'month', 'perPage', 'months'));
     }
 
     /**
@@ -513,6 +514,37 @@ class LeaveController extends Controller
                 default => null,
             };
             
+            // Calculate badge classes
+            $avisDepartBadgeClass = StatusHelperService::getBadgeClass($statut);
+            $avisRetourBadgeClass = StatusHelperService::getBadgeClass($avisRetourStatut);
+            
+            // Calculate consumption_exceeds
+            $consumptionExceeds = false;
+            if ($avisRetour && $avisRetour->date_retour_declaree && $avisDepart && $avisDepart->date_depart) {
+                $dateDepart = Carbon::parse($avisDepart->date_depart);
+                $dateRetourDeclaree = Carbon::parse($avisRetour->date_retour_declaree);
+                
+                // Calculate expected working days
+                $current = $dateDepart->copy();
+                $expectedDays = 0;
+                $holidays = JoursFerie::whereBetween('date', [$dateDepart, $dateRetourDeclaree])
+                    ->pluck('date')
+                    ->map(function($date) {
+                        return $date->format('Y-m-d');
+                    })
+                    ->toArray();
+                
+                while ($current->lte($dateRetourDeclaree)) {
+                    $dateString = $current->format('Y-m-d');
+                    if (!$current->isWeekend() && !in_array($dateString, $holidays)) {
+                        $expectedDays++;
+                    }
+                    $current->addDay();
+                }
+                
+                $consumptionExceeds = $avisRetour->nbr_jours_consumes > $expectedDays;
+            }
+            
             // Create object-like structure for the view
             return (object) [
                 'id' => $demande->id,
@@ -527,6 +559,7 @@ class LeaveController extends Controller
                 'date_retour' => $avisDepart ? $avisDepart->date_retour : null,
                 'avis_depart_statut' => $statut,
                 'avis_depart_statut_label' => $avisDepartStatutLabel,
+                'avis_depart_badge_class' => $avisDepartBadgeClass,
                 'avis_depart_id' => $avisDepart ? $avisDepart->id : null,
                 'avis_depart_pdf_path' => $avisDepart ? $avisDepart->pdf_path : null,
                 'nbr_jours_consommes' => $avisRetour ? ($avisRetour->nbr_jours_consumes ?? 0) : 0,
@@ -534,11 +567,13 @@ class LeaveController extends Controller
                 'date_retour_effectif' => $avisRetour ? $avisRetour->date_retour_effectif : null,
                 'avis_retour_statut' => $avisRetourStatut,
                 'avis_retour_statut_label' => $avisRetourStatutLabel,
+                'avis_retour_badge_class' => $avisRetourBadgeClass,
                 'avis_retour_id' => $avisRetour ? $avisRetour->id : null,
                 'avis_retour_pdf_path' => $avisRetour ? $avisRetour->pdf_path : null,
                 'avis_retour_date_depot' => $avisRetour ? ($avisRetour->created_at ?? ($avis ? $avis->date_depot : null)) : null,
                 'explanation_pdf_path' => $avisRetour ? $avisRetour->explanation_pdf_path : null,
-                'consumption_exceeds' => false,
+                'consumption_exceeds' => $consumptionExceeds,
+                'consumption_icon_color' => $consumptionExceeds ? '#dc3545' : '#6c757d',
                 'avis_depart' => $avisDepart ? (object) [
                     'id' => $avisDepart->id,
                     'statut' => $avisDepart->statut,
@@ -562,7 +597,9 @@ class LeaveController extends Controller
         // Replace the collection with transformed items
         $demandes->setCollection($transformedItems);
         
-        return view('leaves.regional', compact('demandes', 'statut', 'year', 'month', 'perPage'));
+        $months = $this->getMonthsArray();
+        
+        return view('leaves.regional', compact('demandes', 'statut', 'year', 'month', 'perPage', 'months'));
     }
 
     /**
@@ -631,8 +668,10 @@ class LeaveController extends Controller
      */
     public function controleCentral(Request $request)
     {
-        // Implementation needed - placeholder
-        return view('leaves.controle-central');
+        $months = $this->getMonthsArray();
+        $demandes = collect(); // Placeholder - to be implemented
+        
+        return view('leaves.controle-central', compact('demandes', 'months'));
     }
 
     /**
@@ -640,8 +679,10 @@ class LeaveController extends Controller
      */
     public function controleRegional(Request $request)
     {
-        // Implementation needed - placeholder
-        return view('leaves.controle-regional');
+        $months = $this->getMonthsArray();
+        $demandes = collect(); // Placeholder - to be implemented
+        
+        return view('leaves.controle-regional', compact('demandes', 'months'));
     }
 
     /**
@@ -774,6 +815,40 @@ class LeaveController extends Controller
             ->orderBy('created_at', 'desc')
             ->get();
         
+        // Prepare demande data with computed properties
+        $demandes = $demandes->map(function($demande) {
+            $avis = $demande->avis;
+            $avisDepart = $avis ? $avis->avisDepart : null;
+            $avisRetour = $avis ? $avis->avisRetour : null;
+            $hasAvisRetour = $avisRetour !== null;
+            
+            // Format dates for display
+            $dateDepartFormatted = $avisDepart && $avisDepart->date_depart 
+                ? Carbon::parse($avisDepart->date_depart)->format('d/m/Y') 
+                : 'N/A';
+            $dateRetourPrevueFormatted = $avisDepart && $avisDepart->date_retour 
+                ? Carbon::parse($avisDepart->date_retour)->format('d/m/Y') 
+                : 'N/A';
+            $dateDepartInput = $avisDepart && $avisDepart->date_depart 
+                ? Carbon::parse($avisDepart->date_depart)->format('Y-m-d') 
+                : '';
+            $dateRetourPrevueInput = $avisDepart && $avisDepart->date_retour 
+                ? Carbon::parse($avisDepart->date_retour)->format('Y-m-d') 
+                : '';
+            
+            $demande->hasAvisRetour = $hasAvisRetour;
+            $demande->avis = $avis;
+            $demande->avisDepart = $avisDepart;
+            $demande->avisRetour = $avisRetour;
+            $demande->dateDepartFormatted = $dateDepartFormatted;
+            $demande->dateRetourPrevueFormatted = $dateRetourPrevueFormatted;
+            $demande->dateDepartInput = $dateDepartInput;
+            $demande->dateRetourPrevueInput = $dateRetourPrevueInput;
+            $demande->nbJoursDemandes = $avisDepart ? $avisDepart->nb_jours_demandes : 0;
+            
+            return $demande;
+        });
+        
         // Get holidays for the calendar
         $holidays = JoursFerie::select('date', 'name')
             ->whereYear('date', '>=', date('Y') - 1)
@@ -786,7 +861,11 @@ class LeaveController extends Controller
                 ];
             });
         
-        return view('leaves.declare-retour', compact('demandes', 'holidays'));
+        // Get session messages
+        $successMessage = session('success');
+        $errorMessage = session('error');
+        
+        return view('leaves.declare-retour', compact('demandes', 'holidays', 'successMessage', 'errorMessage'));
     }
 
     /**
@@ -939,8 +1018,41 @@ class LeaveController extends Controller
      */
     public function show(Demande $demande)
     {
-        // Implementation needed - placeholder
-        return view('leaves.show', compact('demande'));
+        // Load relationships
+        $demande->load(['avis.avisDepart', 'avis.avisRetour', 'user']);
+        
+        $avis = $demande->avis;
+        $avisDepart = $avis ? $avis->avisDepart : null;
+        $avisRetour = $avis ? $avis->avisRetour : null;
+        
+        // Prepare status maps using helper service
+        $statutMap = StatusHelperService::getStatutMap();
+        $statutColors = StatusHelperService::getStatutColors();
+        $statutIcons = StatusHelperService::getStatutIcons();
+        
+        // Check if explanation PDF is needed
+        $hasPdfPath = $avisRetour && isset($avisRetour->pdf_path) && $avisRetour->pdf_path && $avisRetour->pdf_path !== '';
+        $hasExplanationPdf = $avisRetour && isset($avisRetour->explanation_pdf_path) && $avisRetour->explanation_pdf_path && $avisRetour->explanation_pdf_path !== '';
+        $needsExplanation = false;
+        
+        if ($avisRetour && $avisRetour->date_retour_declaree && $avisRetour->date_retour_effectif) {
+            $dateRetourDeclaree = \Carbon\Carbon::parse($avisRetour->date_retour_declaree);
+            $dateRetourEffectif = \Carbon\Carbon::parse($avisRetour->date_retour_effectif);
+            $needsExplanation = $dateRetourEffectif->greaterThan($dateRetourDeclaree);
+        }
+        
+        return view('leaves.show', compact(
+            'demande',
+            'avis',
+            'avisDepart',
+            'avisRetour',
+            'statutMap',
+            'statutColors',
+            'statutIcons',
+            'hasPdfPath',
+            'hasExplanationPdf',
+            'needsExplanation'
+        ));
     }
 
     /**
@@ -1254,40 +1366,40 @@ class LeaveController extends Controller
      */
     public function downloadExplanationPDF(AvisRetour $avisRetour)
     {
-        $pdfPath = $avisRetour->explanation_pdf_path;
+        $avis = $avisRetour->avis;
+        $demande = $avis ? $avis->demande : null;
         
-        // If PDF doesn't exist, generate it on the fly
-        if (!$pdfPath || !Storage::disk('public')->exists($pdfPath)) {
-            $avis = $avisRetour->avis;
-            $demande = $avis ? $avis->demande : null;
-            
-            if (!$demande || !$demande->user) {
-                abort(404, 'Demande ou utilisateur introuvable.');
-            }
-            
-            $avisDepart = $avis ? $avis->avisDepart : null;
-            
-            // Check if explanation is needed (actual return date > declared return date)
-            if ($avisRetour->date_retour_declaree && $avisRetour->date_retour_effectif) {
-                $dateRetourDeclaree = Carbon::parse($avisRetour->date_retour_declaree);
-                $dateRetourEffectif = Carbon::parse($avisRetour->date_retour_effectif);
-                
-                if ($dateRetourEffectif->greaterThan($dateRetourDeclaree)) {
-                    // Generate PDF
-                    $pdfPath = $this->pdfService->generateExplanationPDF($avisRetour, $demande->user, $avisDepart);
-                    $avisRetour->update(['explanation_pdf_path' => $pdfPath]);
-                } else {
-                    abort(404, 'Note d\'explication non disponible. L\'explication n\'est requise que si la date de retour effective dépasse la date de retour déclarée.');
-                }
-            } else {
-                abort(404, 'Note d\'explication non disponible. Les dates de retour sont manquantes.');
-            }
+        if (!$demande || !$demande->user) {
+            abort(404, 'Demande ou utilisateur introuvable.');
         }
         
-        $fullPath = Storage::disk('public')->path($pdfPath);
-        $filename = 'note-explication-' . $avisRetour->id . '.pdf';
+        $avisDepart = $avis ? $avis->avisDepart : null;
         
-        return response()->download($fullPath, $filename);
+        // Check if explanation is needed (actual return date > declared return date)
+        if ($avisRetour->date_retour_declaree && $avisRetour->date_retour_effectif) {
+            $dateRetourDeclaree = Carbon::parse($avisRetour->date_retour_declaree);
+            $dateRetourEffectif = Carbon::parse($avisRetour->date_retour_effectif);
+            
+            if ($dateRetourEffectif->greaterThan($dateRetourDeclaree)) {
+                // Generate PDF on-the-fly
+                try {
+                    $pdf = $this->pdfService->generateExplanationPDF($avisRetour, $demande->user, $avisDepart);
+                    $filename = 'note-explication-' . $avisRetour->id . '.pdf';
+                    return $pdf->download($filename);
+                } catch (\Exception $e) {
+                    \Log::error('Error generating explanation PDF: ' . $e->getMessage(), [
+                        'avis_retour_id' => $avisRetour->id,
+                        'exception' => get_class($e),
+                        'trace' => $e->getTraceAsString(),
+                    ]);
+                    abort(500, 'Erreur lors de la génération du PDF.');
+                }
+            } else {
+                abort(404, 'Note d\'explication non disponible. L\'explication n\'est requise que si la date de retour effective dépasse la date de retour déclarée.');
+            }
+        } else {
+            abort(404, 'Note d\'explication non disponible. Les dates de retour sont manquantes.');
+        }
     }
 
     /**
@@ -1296,75 +1408,47 @@ class LeaveController extends Controller
     public function downloadAvisDepartPDF(AvisDepart $avisDepart)
     {
         try {
-            $pdfPath = $avisDepart->pdf_path;
+            // Get demande and user
+            $avis = $avisDepart->avis;
+            $demande = $avis ? $avis->demande : null;
             
-            if (!$pdfPath || !Storage::disk('public')->exists($pdfPath)) {
-                // If PDF doesn't exist, generate it
-                $avis = $avisDepart->avis;
-                $demande = $avis ? $avis->demande : null;
-                
-                if (!$demande || !$demande->user) {
-                    abort(404, 'Demande ou utilisateur introuvable.');
-                }
-                
-                // Ensure user has necessary relationships loaded for PDF generation
-                $user = $demande->user;
-                if (!$user->relationLoaded('userInfo')) {
-                    $user->load('userInfo.grade');
-                }
-                
-                // Generate PDF with error handling
-                try {
-                    $pdfPath = $this->pdfService->generateAvisDepartPDF($avisDepart, $user);
-                    $avisDepart->update(['pdf_path' => $pdfPath]);
-                } catch (\Exception $e) {
-                    \Log::error('Error generating avis de départ PDF in download: ' . $e->getMessage(), [
-                        'avis_depart_id' => $avisDepart->id,
-                        'exception' => get_class($e),
-                        'trace' => $e->getTraceAsString(),
-                    ]);
-                    
-                    // Determine redirect route based on user
-                    $user = Auth::user();
-                    $isOwner = $demande && $demande->ppr === $user->ppr;
-                    $redirectRoute = $isOwner ? route('leaves.tracking') : route('hr.leaves.agents');
-                    
-                    return redirect($redirectRoute)
-                        ->with('error', 'Erreur lors de la génération du PDF. Veuillez réessayer.');
-                }
+            if (!$demande || !$demande->user) {
+                abort(404, 'Demande ou utilisateur introuvable.');
             }
             
-            $fullPath = Storage::disk('public')->path($pdfPath);
+            // Ensure user has necessary relationships loaded for PDF generation
+            $user = $demande->user;
+            if (!$user->relationLoaded('userInfo')) {
+                $user->load('userInfo.grade');
+            }
             
-            // Verify file exists before trying to serve it
-            if (!file_exists($fullPath)) {
-                \Log::error('PDF file not found after generation', [
+            // Generate PDF on-the-fly
+            try {
+                $pdf = $this->pdfService->generateAvisDepartPDF($avisDepart, $user);
+            } catch (\Exception $e) {
+                \Log::error('Error generating avis de départ PDF in download: ' . $e->getMessage(), [
                     'avis_depart_id' => $avisDepart->id,
-                    'pdf_path' => $pdfPath,
-                    'full_path' => $fullPath,
+                    'exception' => get_class($e),
+                    'trace' => $e->getTraceAsString(),
                 ]);
                 
-                $user = Auth::user();
-                $avis = $avisDepart->avis;
-                $demande = $avis ? $avis->demande : null;
-                $isOwner = $demande && $demande->ppr === $user->ppr;
+                // Determine redirect route based on user
+                $currentUser = Auth::user();
+                $isOwner = $demande && $demande->ppr === $currentUser->ppr;
                 $redirectRoute = $isOwner ? route('leaves.tracking') : route('hr.leaves.agents');
                 
                 return redirect($redirectRoute)
-                    ->with('error', 'Le fichier PDF est introuvable. Veuillez réessayer.');
+                    ->with('error', 'Erreur lors de la génération du PDF. Veuillez réessayer.');
             }
             
             $filename = 'avis-depart-' . $avisDepart->id . '.pdf';
             
             // Check if request wants inline viewing (from iframe)
             if (request()->get('inline') === '1') {
-                return response()->file($fullPath, [
-                    'Content-Type' => 'application/pdf',
-                    'Content-Disposition' => 'inline; filename="' . $filename . '"',
-                ]);
+                return $pdf->stream($filename);
             }
             
-            return response()->download($fullPath, $filename);
+            return $pdf->download($filename);
         } catch (\Exception $e) {
             \Log::error('Unexpected error in downloadAvisDepartPDF: ' . $e->getMessage(), [
                 'avis_depart_id' => $avisDepart->id,
@@ -1372,10 +1456,10 @@ class LeaveController extends Controller
                 'trace' => $e->getTraceAsString(),
             ]);
             
-            $user = Auth::user();
+            $currentUser = Auth::user();
             $avis = $avisDepart->avis;
             $demande = $avis ? $avis->demande : null;
-            $isOwner = $demande && $demande->ppr === $user->ppr;
+            $isOwner = $demande && $demande->ppr === $currentUser->ppr;
             $redirectRoute = $isOwner ? route('leaves.tracking') : route('hr.leaves.agents');
             
             return redirect($redirectRoute)
@@ -1389,78 +1473,50 @@ class LeaveController extends Controller
     public function downloadAvisRetourPDF(AvisRetour $avisRetour)
     {
         try {
-            $pdfPath = $avisRetour->pdf_path;
+            // Get demande and user
+            $avis = $avisRetour->avis;
+            $demande = $avis ? $avis->demande : null;
             
-            if (!$pdfPath || !Storage::disk('public')->exists($pdfPath)) {
-                // If PDF doesn't exist, generate it
-                $avis = $avisRetour->avis;
-                $demande = $avis ? $avis->demande : null;
-                
-                if (!$demande || !$demande->user) {
-                    abort(404, 'Demande ou utilisateur introuvable.');
-                }
-                
-                // Ensure user has necessary relationships loaded for PDF generation
-                $user = $demande->user;
-                if (!$user->relationLoaded('userInfo')) {
-                    $user->load('userInfo.grade');
-                }
-                
-                // Get avis de départ for PDF generation
-                $avisDepart = $avis ? $avis->avisDepart : null;
-                
-                // Generate PDF with error handling
-                try {
-                    $pdfPath = $this->pdfService->generateAvisRetourPDF($avisRetour, $user, $avisDepart);
-                    $avisRetour->update(['pdf_path' => $pdfPath]);
-                } catch (\Exception $e) {
-                    \Log::error('Error generating avis de retour PDF in download: ' . $e->getMessage(), [
-                        'avis_retour_id' => $avisRetour->id,
-                        'exception' => get_class($e),
-                        'trace' => $e->getTraceAsString(),
-                    ]);
-                    
-                    // Determine redirect route based on user
-                    $user = Auth::user();
-                    $isOwner = $demande && $demande->ppr === $user->ppr;
-                    $redirectRoute = $isOwner ? route('leaves.tracking') : route('hr.leaves.agents');
-                    
-                    return redirect($redirectRoute)
-                        ->with('error', 'Erreur lors de la génération du PDF. Veuillez réessayer.');
-                }
+            if (!$demande || !$demande->user) {
+                abort(404, 'Demande ou utilisateur introuvable.');
             }
             
-            $fullPath = Storage::disk('public')->path($pdfPath);
+            // Ensure user has necessary relationships loaded for PDF generation
+            $user = $demande->user;
+            if (!$user->relationLoaded('userInfo')) {
+                $user->load('userInfo.grade');
+            }
             
-            // Verify file exists before trying to serve it
-            if (!file_exists($fullPath)) {
-                \Log::error('PDF file not found after generation', [
+            // Get avis de départ for PDF generation
+            $avisDepart = $avis ? $avis->avisDepart : null;
+            
+            // Generate PDF on-the-fly
+            try {
+                $pdf = $this->pdfService->generateAvisRetourPDF($avisRetour, $user, $avisDepart);
+            } catch (\Exception $e) {
+                \Log::error('Error generating avis de retour PDF in download: ' . $e->getMessage(), [
                     'avis_retour_id' => $avisRetour->id,
-                    'pdf_path' => $pdfPath,
-                    'full_path' => $fullPath,
+                    'exception' => get_class($e),
+                    'trace' => $e->getTraceAsString(),
                 ]);
                 
-                $user = Auth::user();
-                $avis = $avisRetour->avis;
-                $demande = $avis ? $avis->demande : null;
-                $isOwner = $demande && $demande->ppr === $user->ppr;
+                // Determine redirect route based on user
+                $currentUser = Auth::user();
+                $isOwner = $demande && $demande->ppr === $currentUser->ppr;
                 $redirectRoute = $isOwner ? route('leaves.tracking') : route('hr.leaves.agents');
                 
                 return redirect($redirectRoute)
-                    ->with('error', 'Le fichier PDF est introuvable. Veuillez réessayer.');
+                    ->with('error', 'Erreur lors de la génération du PDF. Veuillez réessayer.');
             }
             
             $filename = 'avis-retour-' . $avisRetour->id . '.pdf';
             
             // Check if request wants inline viewing (from iframe)
             if (request()->get('inline') === '1') {
-                return response()->file($fullPath, [
-                    'Content-Type' => 'application/pdf',
-                    'Content-Disposition' => 'inline; filename="' . $filename . '"',
-                ]);
+                return $pdf->stream($filename);
             }
             
-            return response()->download($fullPath, $filename);
+            return $pdf->download($filename);
         } catch (\Exception $e) {
             \Log::error('Unexpected error in downloadAvisRetourPDF: ' . $e->getMessage(), [
                 'avis_retour_id' => $avisRetour->id,
@@ -1468,10 +1524,10 @@ class LeaveController extends Controller
                 'trace' => $e->getTraceAsString(),
             ]);
             
-            $user = Auth::user();
+            $currentUser = Auth::user();
             $avis = $avisRetour->avis;
             $demande = $avis ? $avis->demande : null;
-            $isOwner = $demande && $demande->ppr === $user->ppr;
+            $isOwner = $demande && $demande->ppr === $currentUser->ppr;
             $redirectRoute = $isOwner ? route('leaves.tracking') : route('hr.leaves.agents');
             
             return redirect($redirectRoute)
@@ -1480,96 +1536,64 @@ class LeaveController extends Controller
     }
 
     /**
-     * View avis de départ PDF with solde info
+     * View avis de départ PDF inline in browser
      */
-    public function viewAvisDepartPDF($avisDepart)
+    public function viewAvisDepartPDF(AvisDepart $avisDepart)
     {
-        // Handle both route model binding and direct ID
-        if (!($avisDepart instanceof AvisDepart)) {
-            $avisDepart = AvisDepart::with(['avis.demande.user'])->find($avisDepart);
-        } else {
-            // Load relationships if not already loaded
-            if (!$avisDepart->relationLoaded('avis')) {
-                $avisDepart->load(['avis.demande.user']);
-            }
-        }
-        
-        if (!$avisDepart) {
-            return redirect()->route('hr.leaves.agents')
-                ->with('error', 'Avis de départ introuvable.');
-        }
-        
-        $avis = $avisDepart->avis;
-        $demande = $avis ? $avis->demande : null;
-        
-        if (!$demande || !$demande->user) {
-            return redirect()->route('hr.leaves.agents')
-                ->with('error', 'Demande ou utilisateur introuvable.');
-        }
-
-        $user = $demande->user;
-        
-        // Ensure user has necessary relationships loaded for PDF generation
-        if (!$user->relationLoaded('userInfo')) {
-            $user->load('userInfo.grade');
-        }
-        
-        $currentUser = Auth::user();
-        
-        // Check if current user is the owner of the demande
-        $isOwner = $currentUser && $currentUser->ppr === $demande->ppr;
-        
-        // Get solde info for the user
-        $currentYear = Carbon::now()->year;
-        $leaveData = app(\App\Actions\Conge\CalculateCongeBalanceAction::class)->execute($user);
-        
-        // Get PDF path, generate if it doesn't exist and avis is approved
-        $pdfPath = $avisDepart->pdf_path;
-        $pdfUrl = null;
-        
-        if ($avisDepart->statut === 'approved') {
-            if (!$pdfPath || !Storage::disk('public')->exists($pdfPath)) {
-                // Generate PDF if it doesn't exist
-                try {
-                    $pdfPath = $this->pdfService->generateAvisDepartPDF($avisDepart, $user);
-                    $avisDepart->update(['pdf_path' => $pdfPath]);
-                } catch (\Exception $e) {
-                    \Log::error('Error generating avis de départ PDF in viewAvisDepartPDF: ' . $e->getMessage(), [
-                        'avis_depart_id' => $avisDepart->id,
-                        'user_ppr' => $user->ppr ?? null,
-                        'exception' => get_class($e),
-                        'trace' => $e->getTraceAsString(),
-                    ]);
-                    // Don't expose internal error details to users, but log them
-                    \Log::error('Error generating avis de départ PDF in viewAvisDepartPDF: ' . $e->getMessage(), [
-                        'avis_depart_id' => $avisDepart->id,
-                        'user_ppr' => $user->ppr ?? null,
-                        'exception' => get_class($e),
-                        'trace' => $e->getTraceAsString(),
-                    ]);
-                    return redirect($isOwner ? route('leaves.tracking') : route('hr.leaves.agents'))
-                        ->with('error', 'Erreur lors de la génération du PDF. Veuillez réessayer.');
-                }
+        try {
+            // Get demande and user
+            $avis = $avisDepart->avis;
+            $demande = $avis ? $avis->demande : null;
+            
+            if (!$demande || !$demande->user) {
+                abort(404, 'Demande ou utilisateur introuvable.');
             }
             
-            if ($pdfPath && Storage::disk('public')->exists($pdfPath)) {
-                // Use the download route with inline parameter for iframe viewing
-                // This ensures proper URL generation and file serving
-                $pdfUrl = route('hr.leaves.download-avis-depart-pdf', ['avisDepart' => $avisDepart->id, 'inline' => 1]);
-            } elseif ($pdfPath) {
-                // If path exists but not in storage, try to regenerate
-                try {
-                    $pdfPath = $this->pdfService->generateAvisDepartPDF($avisDepart, $user);
-                    $avisDepart->update(['pdf_path' => $pdfPath]);
-                    $pdfUrl = route('hr.leaves.download-avis-depart-pdf', ['avisDepart' => $avisDepart->id, 'inline' => 1]);
-                } catch (\Exception $e) {
-                    \Log::error('Error regenerating avis de départ PDF: ' . $e->getMessage());
-                    $pdfUrl = null;
-                }
+            // Ensure user has necessary relationships loaded for PDF generation
+            $user = $demande->user;
+            if (!$user->relationLoaded('userInfo')) {
+                $user->load('userInfo.grade');
             }
+            
+            // Generate PDF on-the-fly
+            try {
+                $pdf = $this->pdfService->generateAvisDepartPDF($avisDepart, $user);
+            } catch (\Exception $e) {
+                \Log::error('Error generating avis de départ PDF in view: ' . $e->getMessage(), [
+                    'avis_depart_id' => $avisDepart->id,
+                    'exception' => get_class($e),
+                    'trace' => $e->getTraceAsString(),
+                ]);
+                
+                // Determine redirect route based on user
+                $currentUser = Auth::user();
+                $isOwner = $demande && $demande->ppr === $currentUser->ppr;
+                $redirectRoute = $isOwner ? route('leaves.tracking') : route('hr.leaves.agents');
+                
+                return redirect($redirectRoute)
+                    ->with('error', 'Erreur lors de la génération du PDF. Veuillez réessayer.');
+            }
+            
+            $filename = 'avis-depart-' . $avisDepart->id . '.pdf';
+            
+            // Stream PDF inline for viewing in browser
+            return $pdf->stream($filename);
+        } catch (\Exception $e) {
+            \Log::error('Unexpected error in viewAvisDepartPDF: ' . $e->getMessage(), [
+                'avis_depart_id' => $avisDepart->id ?? null,
+                'exception' => get_class($e),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            
+            $currentUser = Auth::user();
+            $avis = $avisDepart->avis ?? null;
+            $demande = $avis ? $avis->demande : null;
+            $isOwner = $demande && $demande->ppr === ($currentUser->ppr ?? null);
+            $redirectRoute = $isOwner ? route('leaves.tracking') : route('hr.leaves.agents');
+            
+            return redirect($redirectRoute)
+                ->with('error', 'Erreur lors de la génération du PDF. Veuillez réessayer.');
         }
-
-        return view('leaves.view-avis-depart-pdf', compact('avisDepart', 'user', 'demande', 'leaveData', 'pdfUrl', 'isOwner'));
     }
     
     /**
@@ -1660,76 +1684,68 @@ class LeaveController extends Controller
     /**
      * View avis de retour PDF with solde info
      */
-    public function viewAvisRetourPDF($avisRetour)
+    /**
+     * View avis de retour PDF inline in browser
+     */
+    public function viewAvisRetourPDF(AvisRetour $avisRetour)
     {
-        // Handle both route model binding and direct ID
-        if (!($avisRetour instanceof AvisRetour)) {
-            $avisRetour = AvisRetour::with(['avis.demande.user', 'avis.avisDepart'])->find($avisRetour);
-        } else {
-            // Load relationships if not already loaded
-            if (!$avisRetour->relationLoaded('avis')) {
-                $avisRetour->load(['avis.demande.user', 'avis.avisDepart']);
-            }
-        }
-        
-        if (!$avisRetour) {
-            return redirect()->route('hr.leaves.agents')
-                ->with('error', 'Avis de retour introuvable.');
-        }
-        
-        $avis = $avisRetour->avis;
-        $demande = $avis ? $avis->demande : null;
-        
-        if (!$demande || !$demande->user) {
-            $currentUser = Auth::user();
-            $isOwner = $currentUser && $demande && $currentUser->ppr === $demande->ppr;
-            return redirect($isOwner ? route('leaves.tracking') : route('hr.leaves.agents'))
-                ->with('error', 'Demande ou utilisateur introuvable.');
-        }
-
-        $user = $demande->user;
-        
-        // Ensure user has necessary relationships loaded for PDF generation
-        if (!$user->relationLoaded('userInfo')) {
-            $user->load('userInfo.grade');
-        }
-        
-        $avisDepart = $avis ? $avis->avisDepart : null;
-        $currentUser = Auth::user();
-        
-        // Check if current user is the owner of the demande
-        $isOwner = $currentUser && $currentUser->ppr === $demande->ppr;
-        
-        // Get solde info for the user
-        $currentYear = Carbon::now()->year;
-        $leaveData = app(\App\Actions\Conge\CalculateCongeBalanceAction::class)->execute($user);
-        
-        // Get PDF path, generate if it doesn't exist and avis is approved
-        $pdfPath = $avisRetour->pdf_path;
-        $pdfUrl = null;
-        
-        if ($avisRetour->statut === 'approved') {
-            if (!$pdfPath || !Storage::disk('public')->exists($pdfPath)) {
-                // Generate PDF if it doesn't exist
-                try {
-                    $pdfPath = $this->pdfService->generateAvisRetourPDF($avisRetour, $user, $avisDepart);
-                    $avisRetour->update(['pdf_path' => $pdfPath]);
-                } catch (\Exception $e) {
-                    \Log::error('Error generating avis de retour PDF: ' . $e->getMessage(), [
-                        'avis_retour_id' => $avisRetour->id,
-                        'exception' => get_class($e),
-                        'trace' => $e->getTraceAsString(),
-                    ]);
-                    return redirect($isOwner ? route('leaves.tracking') : route('hr.leaves.agents'))
-                        ->with('error', 'Erreur lors de la génération du PDF. Veuillez réessayer.');
-                }
+        try {
+            // Get demande and user
+            $avis = $avisRetour->avis;
+            $demande = $avis ? $avis->demande : null;
+            
+            if (!$demande || !$demande->user) {
+                abort(404, 'Demande ou utilisateur introuvable.');
             }
             
-            // Use the download route with inline parameter for iframe viewing
-            $pdfUrl = route('hr.leaves.download-avis-retour-pdf', ['avisRetour' => $avisRetour->id, 'inline' => 1]);
+            // Ensure user has necessary relationships loaded for PDF generation
+            $user = $demande->user;
+            if (!$user->relationLoaded('userInfo')) {
+                $user->load('userInfo.grade');
+            }
+            
+            // Get avis de départ for PDF generation
+            $avisDepart = $avis ? $avis->avisDepart : null;
+            
+            // Generate PDF on-the-fly
+            try {
+                $pdf = $this->pdfService->generateAvisRetourPDF($avisRetour, $user, $avisDepart);
+            } catch (\Exception $e) {
+                \Log::error('Error generating avis de retour PDF in view: ' . $e->getMessage(), [
+                    'avis_retour_id' => $avisRetour->id,
+                    'exception' => get_class($e),
+                    'trace' => $e->getTraceAsString(),
+                ]);
+                
+                // Determine redirect route based on user
+                $currentUser = Auth::user();
+                $isOwner = $demande && $demande->ppr === $currentUser->ppr;
+                $redirectRoute = $isOwner ? route('leaves.tracking') : route('hr.leaves.agents');
+                
+                return redirect($redirectRoute)
+                    ->with('error', 'Erreur lors de la génération du PDF. Veuillez réessayer.');
+            }
+            
+            $filename = 'avis-retour-' . $avisRetour->id . '.pdf';
+            
+            // Stream PDF inline for viewing in browser
+            return $pdf->stream($filename);
+        } catch (\Exception $e) {
+            \Log::error('Unexpected error in viewAvisRetourPDF: ' . $e->getMessage(), [
+                'avis_retour_id' => $avisRetour->id ?? null,
+                'exception' => get_class($e),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            
+            $currentUser = Auth::user();
+            $avis = $avisRetour->avis ?? null;
+            $demande = $avis ? $avis->demande : null;
+            $isOwner = $demande && $demande->ppr === ($currentUser->ppr ?? null);
+            $redirectRoute = $isOwner ? route('leaves.tracking') : route('hr.leaves.agents');
+            
+            return redirect($redirectRoute)
+                ->with('error', 'Erreur lors de la génération du PDF. Veuillez réessayer.');
         }
-
-        return view('leaves.view-avis-retour-pdf', compact('avisRetour', 'avisDepart', 'user', 'demande', 'leaveData', 'pdfUrl', 'isOwner'));
     }
 
     /**

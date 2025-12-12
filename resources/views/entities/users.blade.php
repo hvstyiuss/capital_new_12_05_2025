@@ -68,8 +68,8 @@
                 @php
                     $user = $parcours->user;
                     $fullName = $user->fname . ' ' . $user->lname;
-                    $avatar = $user->userInfo && $user->userInfo->photo 
-                        ? asset('storage/' . $user->userInfo->photo) 
+                    $avatar = $user->userInfo && $user->userInfo->photo_url 
+                        ? $user->userInfo->photo_url 
                         : 'https://ui-avatars.com/api/?name=' . urlencode($fullName) . '&background=0d6efd&color=fff&size=128';
                 @endphp
                 <div class="col-md-6 col-lg-4">

@@ -18,10 +18,6 @@
     </div>
 
     <!-- Success/Error Messages -->
-    @php
-        $successMessage = session('success');
-        $errorMessage = session('error');
-    @endphp
     @if($successMessage)
     <div class="alert alert-success alert-dismissible fade show" role="alert" id="successAlert">
         <i class="fas fa-check-circle me-2"></i>{{ $successMessage }}
@@ -63,24 +59,18 @@
                         <select class="form-select @error('demande_id') is-invalid @enderror" id="demande_id" name="demande_id" required onchange="loadDemandeInfo(this.value)">
                             <option value="">-- Sélectionner une demande --</option>
         @foreach($demandes as $demande)
-            @php
-                $avis = $demande->avis;
-                $avisDepart = $avis ? $avis->avisDepart : null;
-                                    $avisRetour = $avis ? $avis->avisRetour : null;
-                                    $hasAvisRetour = $avisRetour !== null;
-            @endphp
-                                @if(!$hasAvisRetour)
-                                <option value="{{ $demande->id }}" 
-                                        data-avis-id="{{ $avis->id }}"
-                                        data-date-depart="{{ $avisDepart ? \Carbon\Carbon::parse($avisDepart->date_depart)->format('Y-m-d') : '' }}"
-                                        data-date-retour-prevue="{{ $avisDepart && $avisDepart->date_retour ? \Carbon\Carbon::parse($avisDepart->date_retour)->format('Y-m-d') : '' }}"
-                                        data-nb-jours-demandes="{{ $avisDepart ? $avisDepart->nb_jours_demandes : 0 }}">
-                                    Demande #{{ $demande->id }} - 
-                                    Départ: {{ $avisDepart ? \Carbon\Carbon::parse($avisDepart->date_depart)->format('d/m/Y') : 'N/A' }} | 
-                                    Retour prévu: {{ $avisDepart && $avisDepart->date_retour ? \Carbon\Carbon::parse($avisDepart->date_retour)->format('d/m/Y') : 'N/A' }}
-                                </option>
-                                @endif
-                            @endforeach
+            @if(!$demande->hasAvisRetour)
+                <option value="{{ $demande->id }}" 
+                        data-avis-id="{{ $demande->avis ? $demande->avis->id : '' }}"
+                        data-date-depart="{{ $demande->dateDepartInput }}"
+                        data-date-retour-prevue="{{ $demande->dateRetourPrevueInput }}"
+                        data-nb-jours-demandes="{{ $demande->nbJoursDemandes }}">
+                    Demande #{{ $demande->id }} - 
+                    Départ: {{ $demande->dateDepartFormatted }} | 
+                    Retour prévu: {{ $demande->dateRetourPrevueFormatted }}
+                </option>
+            @endif
+        @endforeach
                         </select>
                         <input type="hidden" name="avis_id" id="avis_id" value="">
                         @error('demande_id')

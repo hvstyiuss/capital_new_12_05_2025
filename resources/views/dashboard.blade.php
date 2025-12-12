@@ -5,12 +5,12 @@
 @section('content')
 <div class="container-fluid py-4">
     <!-- Header -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <header class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h1 class="h3 mb-1 fw-bold text-dark">Tableau de Bord</h1>
             <p class="text-muted mb-0">Bienvenue sur Capital HR - Votre plateforme de gestion des ressources humaines</p>
         </div>
-    </div>
+    </header>
 
     <!-- Main Statistics Cards -->
     <div class="row g-3 mb-4">
@@ -19,15 +19,16 @@
                 <div class="card-body">
                     <div class="d-flex align-items-center">
                         <div class="flex-shrink-0">
-                            <div class="bg-primary bg-opacity-10 rounded-circle p-3">
-                                <i class="fas fa-users text-primary fs-4"></i>
+                            <div class="bg-primary bg-opacity-10 rounded-circle p-3" aria-hidden="true">
+                                <i class="fas fa-users text-primary fs-4" aria-hidden="true"></i>
                             </div>
                         </div>
                         <div class="flex-grow-1 ms-3">
                             <p class="text-muted mb-0 small">Total Utilisateurs</p>
                             <h4 class="mb-0 fw-bold">{{ number_format($stats['total_users'] ?? 0) }}</h4>
                             <small class="text-success">
-                                <i class="fas fa-check-circle me-1"></i>{{ number_format($stats['active_users'] ?? 0) }} actifs
+                                <i class="fas fa-check-circle me-1" aria-hidden="true"></i>
+                                {{ number_format($stats['active_users'] ?? 0) }} actifs
                             </small>
                         </div>
                     </div>
@@ -39,15 +40,16 @@
                 <div class="card-body">
                     <div class="d-flex align-items-center">
                         <div class="flex-shrink-0">
-                            <div class="bg-success bg-opacity-10 rounded-circle p-3">
-                                <i class="fas fa-calendar-alt text-success fs-4"></i>
+                            <div class="bg-success bg-opacity-10 rounded-circle p-3" aria-hidden="true">
+                                <i class="fas fa-calendar-alt text-success fs-4" aria-hidden="true"></i>
                             </div>
                         </div>
                         <div class="flex-grow-1 ms-3">
                             <p class="text-muted mb-0 small">Total Demandes</p>
                             <h4 class="mb-0 fw-bold">{{ number_format($stats['total_demandes'] ?? 0) }}</h4>
                             <small class="text-secondary">
-                                <i class="fas fa-clock me-1"></i>{{ number_format($stats['pending_demandes'] ?? 0) }} en attente
+                                <i class="fas fa-clock me-1" aria-hidden="true"></i>
+                                {{ number_format($stats['pending_demandes'] ?? 0) }} en attente
                             </small>
                         </div>
                     </div>
@@ -213,12 +215,7 @@
                             <div class="text-center p-3 bg-light rounded">
                                 <p class="text-muted mb-1 small">Taux d'Approximation</p>
                                 <h3 class="mb-0 fw-bold text-secondary">
-                                    @php
-                                        $totalMutations = $stats['total_mutations'] ?? 0;
-                                        $approvedMutations = $stats['approved_mutations'] ?? 0;
-                                        $approvalRate = $totalMutations > 0 ? round(($approvedMutations / $totalMutations) * 100, 1) : 0;
-                                    @endphp
-                                    {{ $approvalRate }}%
+                                    {{ $stats['approval_rate'] ?? 0 }}%
                                 </h3>
                             </div>
                         </div>
@@ -358,13 +355,8 @@
                             </thead>
                             <tbody>
                                 @forelse($stats['top_entites'] ?? [] as $index => $entite)
-                                    @php
-                                        $entityNumber = isset($stats['top_entites']) && $stats['top_entites']->firstItem() 
-                                            ? $stats['top_entites']->firstItem() + $index 
-                                            : $index + 1;
-                                    @endphp
                                     <tr>
-                                        <td><span class="badge bg-secondary">{{ $entityNumber }}</span></td>
+                                        <td><span class="badge bg-secondary">{{ $entite->entityNumber ?? ($index + 1) }}</span></td>
                                         <td>{{ $entite->name }}</td>
                                         <td class="text-end">
                                             <span class="badge bg-primary">{{ $entite->count }} agents</span>

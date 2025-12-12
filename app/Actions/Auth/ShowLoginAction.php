@@ -21,13 +21,38 @@ class ShowLoginAction
         $captcha = $this->authService->prepareCaptcha();
         $block   = $this->authService->getBlockState($ipAddress);
 
+        // Format remaining time message
+        $remainingTimeMessage = $this->formatRemainingTime(
+            $block['remainingMinutes'] ?? 0,
+            $block['remainingSecs'] ?? 0
+        );
+
         return [
             'captcha_question'  => $captcha['captcha_question'],
             'captcha_answer'    => $captcha['captcha_answer'],
             'isBlocked'         => $block['isBlocked'],
             'remainingMinutes'  => $block['remainingMinutes'],
             'remainingSecs'     => $block['remainingSecs'],
+            'remainingTimeMessage' => $remainingTimeMessage,
         ];
+    }
+
+    /**
+     * Format remaining time in a human-readable French message.
+     */
+    private function formatRemainingTime(int $remainingMinutes, int $remainingSecs): string
+    {
+        $timeParts = [];
+        if ($remainingMinutes > 0) {
+            $timeParts[] = $remainingMinutes . ' minute' . ($remainingMinutes > 1 ? 's' : '');
+        }
+        if ($remainingSecs > 0) {
+            $timeParts[] = $remainingSecs . ' seconde' . ($remainingSecs > 1 ? 's' : '');
+        }
+        if (empty($timeParts)) {
+            $timeParts[] = 'quelques secondes';
+        }
+        return implode(' et ', $timeParts);
     }
 }
 

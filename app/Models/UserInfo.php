@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\Storage;
 
 class UserInfo extends Model
 {
@@ -51,5 +52,21 @@ class UserInfo extends Model
     public function getFullNameAttribute(): string
     {
         return $this->fname . ' ' . $this->lname;
+    }
+
+    /**
+     * Get the photo URL attribute.
+     *
+     * @return string|null
+     */
+    public function getPhotoUrlAttribute(): ?string
+    {
+        if (!$this->photo) {
+            return null;
+        }
+
+        // Use asset() for local development compatibility
+        // This generates relative URLs that work with any host/port
+        return asset('storage/' . $this->photo);
     }
 }

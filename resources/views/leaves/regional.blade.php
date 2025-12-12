@@ -63,14 +63,7 @@
                     <label for="month" class="form-label mb-1">Mois</label>
                     <select class="form-select" id="month" name="month" onchange="this.form.submit()">
                         <option value="">Tous les mois</option>
-                        @php
-                            $months = [
-                                1 => 'Janvier', 2 => 'Février', 3 => 'Mars', 4 => 'Avril',
-                                5 => 'Mai', 6 => 'Juin', 7 => 'Juillet', 8 => 'Août',
-                                9 => 'Septembre', 10 => 'Octobre', 11 => 'Novembre', 12 => 'Décembre'
-                            ];
-                        @endphp
-                        @foreach($months as $num => $name)
+                        @foreach($months ?? [] as $num => $name)
                             <option value="{{ $num }}" {{ request('month') == $num ? 'selected' : '' }}>{{ $name }}</option>
                         @endforeach
                     </select>
@@ -129,17 +122,7 @@
                             </div>
                             <div class="d-flex align-items-center gap-2">
                                 @if($item->avis_depart_statut_label)
-                                    @php
-                                        $statut = $item->avis_depart_statut ?? 'pending';
-                                        $badgeClass = match($statut) {
-                                            'approved' => 'bg-success',
-                                            'pending' => 'bg-warning text-dark',
-                                            'rejected' => 'bg-danger',
-                                            'cancelled' => 'bg-secondary',
-                                            default => 'bg-secondary'
-                                        };
-                                    @endphp
-                                    <span class="badge {{ $badgeClass }}">{{ $item->avis_depart_statut_label }}</span>
+                                    <span class="badge {{ $item->avis_depart_badge_class ?? 'bg-secondary' }}">{{ $item->avis_depart_statut_label }}</span>
                                 @endif
                                 @if($item->avis_depart_statut == 'approved' && isset($item->avis_depart_id) && $item->avis_depart_id && isset($item->avis_depart_pdf_path) && $item->avis_depart_pdf_path)
                                     <a href="{{ route('hr.leaves.download-avis-depart-pdf', $item->avis_depart_id) }}" 
@@ -173,17 +156,7 @@
                             </div>
                             <div class="d-flex align-items-center gap-2">
                                 @if($item->avis_retour_statut_label)
-                                    @php
-                                        $statut = $item->avis_retour_statut ?? 'pending';
-                                        $badgeClass = match($statut) {
-                                            'approved' => 'bg-success',
-                                            'pending' => 'bg-warning text-dark',
-                                            'rejected' => 'bg-danger',
-                                            'cancelled' => 'bg-secondary',
-                                            default => 'bg-secondary'
-                                        };
-                                    @endphp
-                                    <span class="badge {{ $badgeClass }}">{{ $item->avis_retour_statut_label }}</span>
+                                    <span class="badge {{ $item->avis_retour_badge_class ?? 'bg-secondary' }}">{{ $item->avis_retour_statut_label }}</span>
                                 @endif
                                 @if($item->avis_retour_statut == 'approved' && isset($item->avis_retour_id) && $item->avis_retour_id)
                                     @if(isset($item->avis_retour_pdf_path) && $item->avis_retour_pdf_path)
@@ -208,9 +181,6 @@
                         <!-- Actions Section -->
                         <div class="col-md-2 text-end">
                             <div class="d-flex flex-column gap-2 align-items-end">
-                                @php
-                                    $consumptionExceeds = isset($item->consumption_exceeds) && $item->consumption_exceeds;
-                                @endphp
                                 <a href="{{ route('hr.leaves.show', $item->id) }}" 
                                    class="btn btn-sm btn-outline-primary" 
                                    title="Voir les détails">
@@ -223,7 +193,7 @@
                                     </a>
                                 @else
                                     @if($item->statut == 'approved' && $item->avis_retour_statut == 'approved')
-                                        @if($consumptionExceeds && $item->avis_retour_id)
+                                        @if(isset($item->consumption_exceeds) && $item->consumption_exceeds && $item->avis_retour_id)
                                             <a href="{{ route('hr.leaves.download-explanation-pdf', $item->avis_retour_id) }}" 
                                                class="btn btn-sm btn-outline-danger" 
                                                target="_blank"
@@ -235,7 +205,7 @@
                                         @endif
                                     @endif
                                 @endif
-                                @if($consumptionExceeds)
+                                @if(isset($item->consumption_exceeds) && $item->consumption_exceeds)
                                     <i class="fas fa-question-circle text-danger" title="Consommation supérieure à la date de retour déclarée"></i>
                                 @endif
                             </div>
@@ -349,17 +319,7 @@
                                 </td>
                                 <td class="text-center align-middle" style="padding: 10px;" onclick="event.stopPropagation();">
                                     @if($item->avis_depart_statut_label)
-                                        @php
-                                            $statut = $item->avis_depart_statut ?? 'pending';
-                                            $badgeClass = match($statut) {
-                                                'approved' => 'bg-success',
-                                                'pending' => 'bg-warning text-dark',
-                                                'rejected' => 'bg-danger',
-                                                'cancelled' => 'bg-secondary',
-                                                default => 'bg-secondary'
-                                            };
-                                        @endphp
-                                        <span class="badge {{ $badgeClass }}" style="pointer-events: none;">{{ $item->avis_depart_statut_label }}</span>
+                                        <span class="badge {{ $item->avis_depart_badge_class ?? 'bg-secondary' }}" style="pointer-events: none;">{{ $item->avis_depart_statut_label }}</span>
                                     @else
                                         <span style="color: #6c757d; pointer-events: none;">-</span>
                                     @endif
@@ -408,17 +368,7 @@
                                 </td>
                                 <td class="text-center align-middle" style="padding: 10px;" onclick="event.stopPropagation();">
                                     @if($item->avis_retour_statut_label)
-                                        @php
-                                            $statut = $item->avis_retour_statut ?? 'pending';
-                                            $badgeClass = match($statut) {
-                                                'approved' => 'bg-success',
-                                                'pending' => 'bg-warning text-dark',
-                                                'rejected' => 'bg-danger',
-                                                'cancelled' => 'bg-secondary',
-                                                default => 'bg-secondary'
-                                            };
-                                        @endphp
-                                        <span class="badge {{ $badgeClass }}" style="pointer-events: none;">{{ $item->avis_retour_statut_label }}</span>
+                                        <span class="badge {{ $item->avis_retour_badge_class ?? 'bg-secondary' }}" style="pointer-events: none;">{{ $item->avis_retour_statut_label }}</span>
                                     @else
                                         <span style="color: #6c757d; pointer-events: none;">-</span>
                                     @endif
@@ -455,11 +405,7 @@
                                     </a>
                                 </td>
                                 <td class="text-center align-middle" style="padding: 10px;">
-                                    @php
-                                        $consumptionExceeds = isset($item->consumption_exceeds) && $item->consumption_exceeds;
-                                        $iconColor = $consumptionExceeds ? '#dc3545' : '#6c757d';
-                                    @endphp
-                                    <i class="fas fa-question-circle" style="color: {{ $iconColor }};"></i>
+                                    <i class="fas fa-question-circle" style="color: {{ $item->consumption_icon_color ?? '#6c757d' }};"></i>
                                 </td>
                                 <td class="text-center align-middle" style="padding: 10px;">
                                     @if($item->statut == 'pending')
@@ -473,7 +419,7 @@
                                 </td>
                                 <td class="text-center align-middle" style="padding: 10px;" onclick="event.stopPropagation();">
                                     @if($item->statut == 'approved' && $item->avis_retour_statut == 'approved')
-                                        @if(isset($item->consumption_exceeds) && $item->consumption_exceeds && $item->avis_retour_id)
+                                        @if(isset($item->consumption_exceeds) && $item->consumption_exceeds && isset($item->avis_retour_id) && $item->avis_retour_id)
                                             <a href="{{ route('hr.leaves.download-explanation-pdf', $item->avis_retour_id) }}" 
                                                class="btn btn-sm btn-outline-danger" 
                                                target="_blank"

@@ -36,20 +36,16 @@
             <div class="top-bar-actions">
                 <!-- Notifications -->
                 <div class="notification-dropdown">
-                    @php
-                        $user = auth()->user();
-                        $unreadCount = $user ? $user->notifications()->whereNull('read_at')->count() : 0;
-                    @endphp
                     <button class="top-bar-btn notification-btn" onclick="toggleNotifications()" title="Notifications">
                         <i class="fas fa-bell"></i>
-                        @if($unreadCount > 0)
-                            <span class="notification-badge">{{ $unreadCount }}</span>
+                        @if($unreadNotificationCount > 0)
+                            <span class="notification-badge">{{ $unreadNotificationCount }}</span>
                         @endif
                     </button>
                     <div class="notification-panel" id="notificationPanel">
                         <div class="notification-header">
                             <h6>Notifications</h6>
-                            @if($unreadCount > 0)
+                            @if($unreadNotificationCount > 0)
                                 <form method="POST" action="{{ route('notifications.mark-all-read') }}" class="inline">
                                     @csrf
                                     @method('PATCH')
@@ -58,12 +54,8 @@
                             @endif
                         </div>
                         <div class="notification-list">
-                            @php
-                                $user = auth()->user();
-                                $notifications = $user ? $user->notifications()->orderBy('created_at', 'desc')->limit(5)->get() : collect();
-                            @endphp
-                            @if($notifications->count() > 0)
-                                @foreach($notifications as $notification)
+                            @if($recentNotifications->count() > 0)
+                                @foreach($recentNotifications as $notification)
                                     <div class="notification-item {{ $notification->read_at ? '' : 'unread' }}">
                                         <div class="notification-icon">
                                             @if(isset($notification->data['icon']))
@@ -99,31 +91,25 @@
                 <div class="profile-dropdown">
                     <button class="top-bar-btn profile-btn" onclick="toggleProfile()" title="Mon profil">
                                 <div class="profile-avatar">
-                                    @php
-                                        $currentUser = auth()->user();
-                                    @endphp
                                     @if($currentUser && $currentUser->image)
                                         <img src="{{ asset('storage/' . $currentUser->image) }}" alt="{{ $currentUser->name }}" class="avatar-img">
                                     @elseif($currentUser && $currentUser->userInfo && $currentUser->userInfo->photo)
-                                        <img src="{{ asset('storage/' . $currentUser->userInfo->photo) }}" alt="{{ $currentUser->name }}" class="avatar-img">
+                                        <img src="{{ $currentUser->userInfo->photo_url }}" alt="{{ $currentUser->name }}" class="avatar-img">
                                     @else
                                         <i class="fas fa-user"></i>
                                     @endif
                                 </div>
-                                <span class="profile-name">{{ auth()->user()->name ?? 'Utilisateur' }}</span>
+                                <span class="profile-name">{{ $currentUser->name ?? 'Utilisateur' }}</span>
                         <i class="fas fa-chevron-down"></i>
                     </button>
                     <div class="profile-panel" id="profilePanel">
                         <div class="profile-header">
                             <div class="profile-info">
                                 <div class="profile-avatar-large">
-                                    @php
-                                        $currentUser = auth()->user();
-                                    @endphp
                                     @if($currentUser && $currentUser->image)
                                         <img src="{{ asset('storage/' . $currentUser->image) }}" alt="{{ $currentUser->name }}" class="avatar-img-large">
                                     @elseif($currentUser && $currentUser->userInfo && $currentUser->userInfo->photo)
-                                        <img src="{{ asset('storage/' . $currentUser->userInfo->photo) }}" alt="{{ $currentUser->name }}" class="avatar-img-large">
+                                        <img src="{{ $currentUser->userInfo->photo_url }}" alt="{{ $currentUser->name }}" class="avatar-img-large">
                                     @else
                                         <div class="avatar-initials">
                                             {{ strtoupper(substr($currentUser->name ?? 'U', 0, 1)) }}
@@ -131,8 +117,8 @@
                                     @endif
                                 </div>
                                 <div class="profile-details">
-                                    <h6>{{ auth()->user()->name ?? 'Utilisateur' }}</h6>
-                                    <span>{{ auth()->user()->email ?? 'email@example.com' }}</span>
+                                    <h6>{{ $currentUser->name ?? 'Utilisateur' }}</h6>
+                                    <span>{{ $currentUser->email ?? 'email@example.com' }}</span>
                                     @if($currentUser && $currentUser->ppr)
                                         <span class="profile-ppr">PPR: {{ $currentUser->ppr }}</span>
                                     @endif

@@ -13,9 +13,6 @@
         </thead>
         <tbody id="usersTableBody">
             @forelse($users as $user)
-                @php
-                    $email = $user->email ?? $user->userprimary->email ?? null;
-                @endphp
                 <tr>
                     <td>
                         <span class="ppr-badge">{{ $user->ppr }}</span>
@@ -39,8 +36,8 @@
                         </div>
                     </td>
                     <td>
-                        @if($email)
-                            <span class="text-dark">{{ $email }}</span>
+                        @if($user->email_for_display ?? null)
+                            <span class="text-dark">{{ $user->email_for_display }}</span>
                         @else
                             <span class="text-muted">-</span>
                         @endif

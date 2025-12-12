@@ -134,7 +134,7 @@
                                     <td class="px-3 py-3">
                                         <div class="d-flex align-items-center">
                                             @if($affectation->user && $affectation->user->userInfo && $affectation->user->userInfo->photo)
-                                                <img src="{{ asset('storage/' . $affectation->user->userInfo->photo) }}" 
+                                                <img src="{{ $affectation->user->userInfo->photo_url }}" 
                                                      alt="{{ $affectation->user->fname }} {{ $affectation->user->lname }}" 
                                                      class="rounded-circle me-2" 
                                                      style="width: 32px; height: 32px; object-fit: cover;">

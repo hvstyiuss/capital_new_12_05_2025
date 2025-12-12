@@ -10,37 +10,39 @@
         </div>
     </div>
 
-    <nav class="sidebar-nav">
+    <nav class="sidebar-nav" aria-label="Navigation principale">
         <div class="nav-item">
-            <a class="nav-link {{ request()->routeIs('dashboard') ? 'active' : '' }}" href="{{ route('dashboard') }}">
-                <i class="fas fa-tachometer-alt"></i>
+            <a class="nav-link @class(['active' => request()->routeIs('dashboard')])" 
+               href="{{ route('dashboard') }}"
+               aria-current="{{ request()->routeIs('dashboard') ? 'page' : null }}">
+                <i class="fas fa-tachometer-alt" aria-hidden="true"></i>
                 <span>Tableau de Bord</span>
             </a>
         </div>
 
         <!-- RH Stats (Admin, Collaborateur Rh, super Collaborateur Rh) -->
-        @php
-            $sidebarUser = auth()->user();
-            $hasRhStatsRole = false;
-            if ($sidebarUser) {
-                $hasRhStatsRole = $sidebarUser->hasRole('admin') || 
-                                 $sidebarUser->hasRole('Collaborateur Rh') || 
-                                 $sidebarUser->hasRole('super Collaborateur Rh');
-            }
-        @endphp
-        @if($hasRhStatsRole)
+        @if($hasRhStatsRole ?? false)
         <div class="nav-item has-submenu">
-            <a class="nav-link has-submenu {{ request()->routeIs('hr.stats') || request()->routeIs('hr.users.*') ? 'active' : '' }}" onclick="toggleSubmenu(this); return false;">
-                <i class="fas fa-chart-line"></i>
+            <a class="nav-link has-submenu @class(['active' => request()->routeIs(['hr.stats', 'hr.users.*'])])" 
+               onclick="toggleSubmenu(this); return false;"
+               aria-expanded="{{ request()->routeIs(['hr.stats', 'hr.users.*']) ? 'true' : 'false' }}"
+               aria-haspopup="true">
+                <i class="fas fa-chart-line" aria-hidden="true"></i>
                 <span>RH Stats</span>
             </a>
-            <div class="submenu {{ request()->routeIs('hr.stats') || request()->routeIs('hr.users.*') ? 'expanded' : '' }}">
-                <a class="submenu-item {{ request()->routeIs('hr.stats') ? 'active' : '' }}" href="{{ route('hr.stats') }}">
-                    <i class="fas fa-chart-bar"></i> <span>Statistiques</span>
+            <div class="submenu @class(['expanded' => request()->routeIs(['hr.stats', 'hr.users.*'])])">
+                <a class="submenu-item @class(['active' => request()->routeIs('hr.stats')])" 
+                   href="{{ route('hr.stats') }}"
+                   aria-current="{{ request()->routeIs('hr.stats') ? 'page' : null }}">
+                    <i class="fas fa-chart-bar" aria-hidden="true"></i>
+                    <span>Statistiques</span>
                 </a>
                 @if(auth()->user()->hasRole('admin'))
-                <a class="submenu-item {{ request()->routeIs('hr.users.*') ? 'active' : '' }}" href="{{ route('hr.users.index') }}">
-                    <i class="fas fa-users-cog"></i> <span>Gestion des Utilisateurs</span>
+                <a class="submenu-item @class(['active' => request()->routeIs('hr.users.*')])" 
+                   href="{{ route('hr.users.index') }}"
+                   aria-current="{{ request()->routeIs('hr.users.*') ? 'page' : null }}">
+                    <i class="fas fa-users-cog" aria-hidden="true"></i>
+                    <span>Gestion des Utilisateurs</span>
                 </a>
                 @endif
             </div>
@@ -60,18 +62,15 @@
                 <a class="submenu-item {{ request()->routeIs('leaves.tracking') ? 'active' : '' }}" href="{{ route('leaves.tracking') }}">
                     <i class="fas fa-list-alt"></i> <span>Suivi mes Demandes</span>
                 </a>
-                <a class="submenu-item {{ request()->routeIs('hr.leaves.annuel') ? 'active' : '' }}" href="{{ route('hr.leaves.annuel') }}">
-                    <i class="fas fa-list-alt"></i> <span>Mon Solde Annuel</span>
-                </a>
-                @php
-                    $isChef = auth()->user()->isChef() ?? false;
-                @endphp
-                @if($isChef)
+                @if($isChef ?? false)
                 <a class="submenu-item {{ request()->routeIs('hr.leaves.agents') ? 'active' : '' }}" href="{{ route('hr.leaves.agents') }}">
-                    <i class="fas fa-clipboard-list"></i> <span>Suivi de demandes de mes agents</span>
+                    <i class="fas fa-clipboard-list"></i> <span>Suivi de Demandes de mes Agents</span>
                 </a>
                 <a class="submenu-item {{ request()->routeIs('hr.leaves.agents-solde') ? 'active' : '' }}" href="{{ route('hr.leaves.agents-solde') }}">
                     <i class="fas fa-wallet"></i> <span>Solde Actuel de mes Agents</span>
+                </a>
+                <a class="submenu-item {{ request()->routeIs('hr.leaves.annuel') ? 'active' : '' }}" href="{{ route('hr.leaves.annuel') }}">
+                    <i class="fas fa-list-alt"></i> <span>Mon Solde Annuel</span>
                 </a>
                 @endif
                 @if(auth()->user()->hasRole('admin'))
@@ -90,36 +89,29 @@
 
         <!-- Mutations -->
         <div class="nav-item has-submenu">
-            <a class="nav-link has-submenu {{ request()->routeIs('mutations.*') || request()->routeIs('affectation.*') ? 'active' : '' }}" onclick="toggleSubmenu(this); return false;">
-                <i class="fas fa-exchange-alt"></i>
+            <a class="nav-link has-submenu @class(['active' => request()->routeIs(['mutations.*', 'affectation.*'])])" 
+               onclick="toggleSubmenu(this); return false;"
+               aria-expanded="{{ request()->routeIs(['mutations.*', 'affectation.*']) ? 'true' : 'false' }}"
+               aria-haspopup="true">
+                <i class="fas fa-exchange-alt" aria-hidden="true"></i>
                 <span>Mutations</span>
             </a>
-            <div class="submenu {{ request()->routeIs('mutations.*') || request()->routeIs('affectation.*') ? 'expanded' : '' }}">
-                <a class="submenu-item {{ request()->routeIs('mutations.create') ? 'active' : '' }}" href="{{ route('mutations.create') }}">
-                    <i class="fas fa-plus-circle"></i> <span>Faire mutation</span>
+            <div class="submenu @class(['expanded' => request()->routeIs(['mutations.*', 'affectation.*'])])">
+                <a class="submenu-item @class(['active' => request()->routeIs('mutations.create')])" 
+                   href="{{ route('mutations.create') }}"
+                   aria-current="{{ request()->routeIs('mutations.create') ? 'page' : null }}">
+                    <i class="fas fa-plus-circle" aria-hidden="true"></i>
+                    <span>Faire mutation</span>
                 </a>
                 <a class="submenu-item {{ request()->routeIs('mutations.tracking') ? 'active' : '' }}" href="{{ route('mutations.tracking') }}">
                     <i class="fas fa-list-alt"></i> <span>Suivi mes demandes</span>
                 </a>
-                @php
-                    $user = auth()->user();
-                    $isDirector = $user && method_exists($user, 'isDirectorOfDirection') ? $user->isDirectorOfDirection() : false;
-                    $isSpecialChef = false;
-                    if ($user) {
-                        $mutationService = app(\App\Services\MutationService::class);
-                        $isSpecialChef = $mutationService->isChefOfSpecialEntity($user);
-                    }
-                @endphp
-                @if($isDirector || $isSpecialChef)
+                @if(($isDirector ?? false) || ($isSpecialChef ?? false))
                 <a class="submenu-item {{ request()->routeIs('mutations.agent-requests') ? 'active' : '' }}" href="{{ route('mutations.agent-requests') }}">
                     <i class="fas fa-users"></i> <span>Suivi Demandes de Mutations</span>
                 </a>
                 @endif
-                @php
-                    $user = auth()->user();
-                    $hasSuperRhRole = $user && $user->hasRole('super Collaborateur Rh');
-                @endphp
-                @if($hasSuperRhRole)
+                @if($hasSuperRhRole ?? false)
                 <a class="submenu-item {{ request()->routeIs('mutations.super-rh.destination-requests') ? 'active' : '' }}" href="{{ route('mutations.super-rh.destination-requests') }}">
                     <i class="fas fa-file-alt"></i> <span>Demande de mutation</span>
                 </a>
@@ -162,16 +154,7 @@
         @endif
 
         <!-- Déplacements pour Chefs -->
-        @php
-            $isChef = auth()->user()->isChef() ?? false;
-            $chefEntites = [];
-            if ($isChef && !$hasRhStatsRole) {
-                $chefEntites = \App\Models\Entite::where('chef_ppr', auth()->user()->ppr)
-                    ->with('entiteInfo')
-                    ->get();
-            }
-        @endphp
-        @if($isChef && !$hasRhStatsRole && $chefEntites->count() > 0)
+        @if(($isChef ?? false) && !($hasRhStatsRole ?? false) && ($chefEntites ?? collect())->count() > 0)
         <div class="nav-item">
             <a class="nav-link {{ request()->routeIs('deplacements.chef.*') ? 'active' : '' }}" href="{{ route('deplacements.chef.index') }}">
                 <i class="fas fa-plane"></i>
@@ -181,10 +164,7 @@
         @endif
 
         <!-- Mes Agents (Chef and Admin only) -->
-        @php
-            $isChef = auth()->user()->isChef() ?? false;
-        @endphp
-        @if($isChef || auth()->user()->hasRole('admin'))
+        @if(($isChef ?? false) || auth()->user()->hasRole('admin'))
         <div class="nav-item has-submenu">
             <a class="nav-link has-submenu {{ request()->routeIs('agents.*') ? 'active' : '' }}" onclick="toggleSubmenu(this); return false;">
                 <i class="fas fa-users-cog"></i>
@@ -262,11 +242,8 @@
             <a class="nav-link {{ request()->routeIs('notifications.*') ? 'active' : '' }}" href="{{ route('notifications.index') }}">
                 <i class="fas fa-bell"></i>
                 <span>Notifications</span>
-                @php
-                    $unreadCount = auth()->user()->notifications()->whereNull('read_at')->count();
-                @endphp
-                @if($unreadCount > 0)
-                    <span class="notification-count" style="background-color: #dc3545; color: white; border-radius: 50%; width: 20px; height: 20px; font-size: 0.7rem; display: inline-flex; align-items: center; justify-content: center; font-weight: 600; margin-left: auto; margin-right: 0.5rem;">{{ $unreadCount }}</span>
+                @if(($unreadNotificationCount ?? 0) > 0)
+                    <span class="notification-count" style="background-color: #dc3545; color: white; border-radius: 50%; width: 20px; height: 20px; font-size: 0.7rem; display: inline-flex; align-items: center; justify-content: center; font-weight: 600; margin-left: auto; margin-right: 0.5rem;">{{ $unreadNotificationCount }}</span>
                 @endif
             </a>
         </div>

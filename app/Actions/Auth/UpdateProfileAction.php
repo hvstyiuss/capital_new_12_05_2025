@@ -6,9 +6,17 @@ use App\Models\User;
 use App\DTOs\Auth\UpdateProfileDTO;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
+use App\Services\ProfileImageService;
 
 class UpdateProfileAction
 {
+    protected ProfileImageService $profileImageService;
+
+    public function __construct(ProfileImageService $profileImageService)
+    {
+        $this->profileImageService = $profileImageService;
+    }
+
     /**
      * Update the authenticated user's profile data.
      */
@@ -26,17 +34,9 @@ class UpdateProfileAction
             ]);
         }
 
-        // Handle image upload
+        // Handle image upload using ProfileImageService
         if ($dto->image !== null) {
-            if ($user->image && Storage::disk('public')->exists($user->image)) {
-                Storage::disk('public')->delete($user->image);
-            }
-
-            $imagePath = $dto->image->store('users', 'public');
-
-            $user->update([
-                'image' => $imagePath,
-            ]);
+            $this->profileImageService->uploadProfileImage($user, $dto->image);
         }
     }
 }

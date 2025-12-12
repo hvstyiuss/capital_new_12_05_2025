@@ -16,17 +16,17 @@
         'success' => 'bg-gradient-to-r from-green-50 to-emerald-50 border-l-4 border-green-500 text-green-700',
         'error' => 'bg-gradient-to-r from-red-50 to-pink-50 border-l-4 border-red-500 text-red-700',
         'warning' => 'bg-gradient-to-r from-yellow-50 to-orange-50 border-l-4 border-yellow-500 text-yellow-700',
-        'info' => 'bg-gradient-to-r from-blue-50 to-indigo-50 border-l-4 border-blue-500 text-blue-700'
+        'info' => 'bg-gradient-to-r from-blue-50 to-indigo-50 border-l-4 border-blue-500 text-blue-700',
     ];
     
     $iconClasses = [
         'success' => 'fas fa-check-circle text-green-600',
         'error' => 'fas fa-exclamation-triangle text-red-600',
         'warning' => 'fas fa-exclamation-triangle text-yellow-600',
-        'info' => 'fas fa-info-circle text-blue-600'
+        'info' => 'fas fa-info-circle text-blue-600',
     ];
     
-    $classes = 'alert ' . $typeClasses[$type] . ' p-6 rounded-xl mb-6 shadow-lg transition-all duration-300';
+    $classes = 'alert ' . ($typeClasses[$type] ?? $typeClasses['info']) . ' p-6 rounded-xl mb-6 shadow-lg transition-all duration-300';
 @endphp
 
 <div {{ $attributes->merge(['class' => $classes]) }} 
@@ -34,22 +34,21 @@
      @if($dismissible) data-dismissible="true" @endif
 >
     <div class="flex items-center gap-3">
-        <i class="{{ $iconClasses[$type] }} text-2xl"></i>
+        <i class="{{ $iconClasses[$type] ?? $iconClasses['info'] }} text-2xl" aria-hidden="true"></i>
         <div class="flex-1">
             @if($title)
                 <h3 class="font-semibold text-lg mb-1">{{ $title }}</h3>
             @endif
-            <p class="text-sm">{{ $slot }}</p>
+            <div class="text-sm">{{ $slot }}</div>
         </div>
         
         @if($dismissible)
             <button type="button" 
                     class="alert-dismiss-btn text-gray-400 hover:text-gray-600 transition-colors"
                     onclick="dismissAlert(this.closest('.alert'))"
-                    aria-label="Fermer"
-                    title="Fermer"
-            >
-                <i class="fas fa-times text-lg"></i>
+                    aria-label="Fermer l'alerte"
+                    title="Fermer">
+                <i class="fas fa-times text-lg" aria-hidden="true"></i>
             </button>
         @endif
     </div>

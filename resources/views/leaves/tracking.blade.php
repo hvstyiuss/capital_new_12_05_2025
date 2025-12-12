@@ -5,11 +5,95 @@
 @section('content')
 <div class="container-fluid px-4 py-4">
     <!-- Header -->
-    <div class="mb-4">
+    <header class="mb-4">
         <h1 class="h3 mb-0 text-gray-800">
             Suivi des Demandes de Congés
         </h1>
+    </header>
+
+    <!-- Leave Statistics -->
+    @if(isset($leaveStats))
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-white border-bottom">
+            <h5 class="mb-0 fw-bold">
+                <i class="fas fa-exchange-alt me-2"></i>Suivi des Demandes de Congé
+            </h5>
+            <p class="text-muted mb-0 small">Consultez l'état de vos demandes de congé</p>
+        </div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-3 col-sm-6">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <div class="flex-shrink-0">
+                                    <div class="bg-primary bg-opacity-10 rounded-circle p-3">
+                                        <i class="fas fa-exchange-alt text-primary fs-4"></i>
+                                    </div>
+                                </div>
+                                <div class="flex-grow-1 ms-3">
+                                    <p class="text-muted mb-0 small">Total Demandes</p>
+                                    <h4 class="mb-0 fw-bold">{{ number_format($leaveStats['total'] ?? 0) }}</h4>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3 col-sm-6">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <div class="flex-shrink-0">
+                                    <div class="bg-warning bg-opacity-10 rounded-circle p-3">
+                                        <i class="fas fa-clock text-warning fs-4"></i>
+                                    </div>
+                                </div>
+                                <div class="flex-grow-1 ms-3">
+                                    <p class="text-muted mb-0 small">En Attente</p>
+                                    <h4 class="mb-0 fw-bold">{{ number_format($leaveStats['pending'] ?? 0) }}</h4>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3 col-sm-6">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <div class="flex-shrink-0">
+                                    <div class="bg-success bg-opacity-10 rounded-circle p-3">
+                                        <i class="fas fa-check-circle text-success fs-4"></i>
+                                    </div>
+                                </div>
+                                <div class="flex-grow-1 ms-3">
+                                    <p class="text-muted mb-0 small">Validées</p>
+                                    <h4 class="mb-0 fw-bold">{{ number_format($leaveStats['approved'] ?? 0) }}</h4>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3 col-sm-6">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <div class="flex-shrink-0">
+                                    <div class="bg-danger bg-opacity-10 rounded-circle p-3">
+                                        <i class="fas fa-times-circle text-danger fs-4"></i>
+                                    </div>
+                                </div>
+                                <div class="flex-grow-1 ms-3">
+                                    <p class="text-muted mb-0 small">Rejetées</p>
+                                    <h4 class="mb-0 fw-bold">{{ number_format($leaveStats['rejected'] ?? 0) }}</h4>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
+    @endif
 
     <!-- Alert Message - Fixed Position -->
     <script>
@@ -28,20 +112,20 @@
         }
     })();
     </script>
-    <div class="alert alert-warning alert-dismissible show mb-4" id="leaveInfoAlert" data-no-auto-hide="true" data-alert-key="leave-info-alert" style="position: sticky; top: 0; z-index: 1000;">
-        <div class="d-flex align-items-start">
-            <i class="fas fa-exclamation-triangle me-3 mt-1" style="font-size: 1.2rem;"></i>
-            <div class="flex-grow-1">
-                <p class="mb-2">
-                     Après avoir soumis votre demande de congé, vous pouvez l'annuler uniquement si elle est encore en attente d'approbation. Une fois votre demande approuvée, vous devez soumettre un avis de départ le jour de votre départ, puis un avis de retour le jour de votre retour effectif.
-                </p>
-                <p class="mb-0">
-                     بعد تقديم طلب الإجازة، يمكنكم إلغاء الطلب فقط إذا كان لا يزال في انتظار الموافقة. بمجرد الموافقة على طلبكم، يجب عليكم تقديم إشعار المغادرة في يوم مغادرتكم، ثم إشعار العودة في يوم عودتكم الفعلية.
-                </p>
-            </div>
-        </div>
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    </div>
+    <x-alert type="warning" 
+             :dismissible="true" 
+             id="leaveInfoAlert" 
+             data-no-auto-hide="true" 
+             data-alert-key="leave-info-alert"
+             class="mb-4"
+             style="position: sticky; top: 0; z-index: 1000;">
+        <p class="mb-2">
+            Après avoir soumis votre demande de congé, vous pouvez l'annuler uniquement si elle est encore en attente d'approbation. Une fois votre demande approuvée, vous devez soumettre un avis de départ le jour de votre départ, puis un avis de retour le jour de votre retour effectif.
+        </p>
+        <p class="mb-0" dir="rtl" lang="ar">
+            بعد تقديم طلب الإجازة، يمكنكم إلغاء الطلب فقط إذا كان لا يزال في انتظار الموافقة. بمجرد الموافقة على طلبكم، يجب عليكم تقديم إشعار المغادرة في يوم مغادرتكم، ثم إشعار العودة في يوم عودتكم الفعلية.
+        </p>
+    </x-alert>
 
     <!-- Filters and Search -->
     <div class="card shadow-sm mb-4">
@@ -49,19 +133,19 @@
             <div class="row align-items-center">
                 <div class="col-md-3 mb-3 mb-md-0">
                     <label for="year" class="form-label mb-1">Année</label>
-                    <select class="form-select" id="year">
-                        @for($y = date('Y'); $y >= date('Y') - 5; $y--)
-                            <option value="{{ $y }}" {{ $year == $y ? 'selected' : '' }}>{{ $y }}</option>
-                        @endfor
+                    <select class="form-select" id="year" aria-label="Sélectionner l'année">
+                        @foreach(range(date('Y'), date('Y') - 5) as $y)
+                            <option value="{{ $y }}" @selected($year == $y)>{{ $y }}</option>
+                        @endforeach
                     </select>
                 </div>
                 <div class="col-md-3 mb-3 mb-md-0">
                     <label for="per_page" class="form-label mb-1">Afficher</label>
-                    <select class="form-select" id="per_page">
-                        <option value="10" {{ $perPage == 10 ? 'selected' : '' }}>10 lignes par page</option>
-                        <option value="25" {{ $perPage == 25 ? 'selected' : '' }}>25 lignes par page</option>
-                        <option value="50" {{ $perPage == 50 ? 'selected' : '' }}>50 lignes par page</option>
-                        <option value="100" {{ $perPage == 100 ? 'selected' : '' }}>100 lignes par page</option>
+                    <select class="form-select" id="per_page" aria-label="Nombre de lignes par page">
+                        <option value="10" @selected($perPage == 10)>10 lignes par page</option>
+                        <option value="25" @selected($perPage == 25)>25 lignes par page</option>
+                        <option value="50" @selected($perPage == 50)>50 lignes par page</option>
+                        <option value="100" @selected($perPage == 100)>100 lignes par page</option>
                     </select>
                 </div>
                 <div class="col-md-6">
@@ -83,7 +167,7 @@
     <div class="row g-3" id="demandesCardsContainer" style="display: none;">
         @forelse($items as $index => $demande)
         <div class="col-12">
-            <div class="card shadow-sm border-left-4" style="border-left-color: {{ isset($demande['statut']) && (strtolower($demande['statut']) == 'rejeté' || strtolower($demande['statut']) == 'rejected') ? '#dc3545' : (isset($demande['statut']) && (strtolower($demande['statut']) == 'approuvé' || strtolower($demande['statut']) == 'approved' || strtolower($demande['statut']) == 'validé') ? '#28a745' : '#ffc107') }};">
+            <div class="card shadow-sm border-left-4 {{ $demande['border_class'] ?? 'border-left-pending' }}">
                 <div class="card-body p-3">
                     <div class="row align-items-center">
                         <!-- Left Section: Basic Info -->
@@ -116,24 +200,7 @@
                             </div>
                             <div class="d-flex align-items-center gap-2">
                                 @if(isset($demande['avis_depart']['statut']))
-                                    @php
-                                        $statut = $demande['avis_depart']['statut'];
-                                        $badgeClass = match($statut) {
-                                            'approved' => 'bg-success',
-                                            'pending' => 'bg-warning text-dark',
-                                            'rejected' => 'bg-danger',
-                                            'cancelled' => 'bg-secondary',
-                                            default => 'bg-secondary'
-                                        };
-                                        $statutMap = [
-                                            'pending' => 'En attente',
-                                            'approved' => 'Validé',
-                                            'rejected' => 'Rejeté',
-                                            'cancelled' => 'Annulé',
-                                        ];
-                                        $statutLabel = $statutMap[$statut] ?? $statut;
-                                    @endphp
-                                    <span class="badge {{ $badgeClass }}">{{ $statutLabel }}</span>
+                                    <span class="badge {{ $demande['avis_depart']['badge_class'] ?? 'bg-secondary' }}">{{ $demande['avis_depart']['statut_label'] ?? ($demande['avis_depart']['statut'] ?? '-') }}</span>
                                 @endif
                                 @if(isset($demande['avis_depart']['statut']) && $demande['avis_depart']['statut'] == 'approved' && isset($demande['avis_depart']['id']) && $demande['avis_depart']['id'])
                                     @if(isset($demande['avis_depart']['pdf_path']) && $demande['avis_depart']['pdf_path'])
@@ -169,23 +236,12 @@
                             </div>
                             <div class="d-flex align-items-center gap-2">
                                 @if(isset($demande['avis_retour']['statut_raw']))
-                                    @php
-                                        $statut = $demande['avis_retour']['statut_raw'];
-                                        $badgeClass = match($statut) {
-                                            'approved' => 'bg-success',
-                                            'pending' => 'bg-warning text-dark',
-                                            'rejected' => 'bg-danger',
-                                            'cancelled' => 'bg-secondary',
-                                            default => 'bg-secondary'
-                                        };
-                                    @endphp
-                                    <span class="badge {{ $badgeClass }}">{{ $demande['avis_retour']['statut'] ?? '-' }}</span>
+                                    <span class="badge {{ $demande['avis_retour']['badge_class'] ?? 'bg-secondary' }}">{{ $demande['avis_retour']['statut'] ?? '-' }}</span>
                                 @endif
                                 @if(isset($demande['avis_retour']['statut_raw']) && $demande['avis_retour']['statut_raw'] == 'approved' && isset($demande['avis_retour']['id']) && $demande['avis_retour']['id'])
-                                    <a href="{{ route('hr.leaves.download-avis-retour-pdf', $demande['avis_retour']['id']) }}" 
+                                    <a href="{{ route('hr.leaves.view-avis-retour-pdf', $demande['avis_retour']['id']) }}" 
                                        class="text-success" 
-                                       target="_blank"
-                                       title="Avis de Retour PDF - Sera généré si non existant">
+                                       title="Voir Avis de Retour PDF avec Solde">
                                         <i class="fas fa-file-pdf"></i>
                                     </a>
                                     @if((isset($demande['avis_retour']['explanation_pdf_path']) && $demande['avis_retour']['explanation_pdf_path']) || 
@@ -219,10 +275,9 @@
                                     </a>
                                 @endif
                                 @if(isset($demande['avis_retour']['statut_raw']) && $demande['avis_retour']['statut_raw'] == 'approved' && isset($demande['avis_retour']['id']) && $demande['avis_retour']['id'])
-                                    <a href="{{ route('hr.leaves.download-avis-retour-pdf', $demande['avis_retour']['id']) }}" 
+                                    <a href="{{ route('hr.leaves.view-avis-retour-pdf', $demande['avis_retour']['id']) }}" 
                                        class="btn btn-sm btn-outline-success" 
-                                       target="_blank"
-                                       title="Avis de Retour PDF - Sera généré si non existant">
+                                       title="Voir Avis de Retour PDF avec Solde">
                                         <i class="fas fa-file-pdf me-1"></i> PDF Retour
                                     </a>
                                     @if((isset($demande['avis_retour']['explanation_pdf_path']) && $demande['avis_retour']['explanation_pdf_path']) || 
@@ -401,24 +456,7 @@
                             </td>
                             <td class="text-center align-middle" style="padding: 10px;" onclick="event.stopPropagation();">
                                 @if(isset($demande['avis_depart']['statut']))
-                                    @php
-                                        $statut = $demande['avis_depart']['statut'];
-                                        $badgeClass = match($statut) {
-                                            'approved' => 'bg-success',
-                                            'pending' => 'bg-warning text-dark',
-                                            'rejected' => 'bg-danger',
-                                            'cancelled' => 'bg-secondary',
-                                            default => 'bg-secondary'
-                                        };
-                                        $statutMap = [
-                                            'pending' => 'En attente',
-                                            'approved' => 'Validé',
-                                            'rejected' => 'Rejeté',
-                                            'cancelled' => 'Annulé',
-                                        ];
-                                        $statutLabel = $statutMap[$statut] ?? $statut;
-                                    @endphp
-                                    <span class="badge {{ $badgeClass }}" style="pointer-events: none;">{{ $statutLabel }}</span>
+                                    <span class="badge {{ $demande['avis_depart']['badge_class'] ?? 'bg-secondary' }}" style="pointer-events: none;">{{ $demande['avis_depart']['statut_label'] ?? ($demande['avis_depart']['statut'] ?? '-') }}</span>
                                 @else
                                     <span style="color: #6c757d; pointer-events: none;">-</span>
                                 @endif
@@ -454,17 +492,7 @@
                             </td>
                             <td class="text-center align-middle" style="padding: 10px;" onclick="event.stopPropagation();">
                                 @if(isset($demande['avis_retour']['statut_raw']))
-                                    @php
-                                        $statut = $demande['avis_retour']['statut_raw'];
-                                        $badgeClass = match($statut) {
-                                            'approved' => 'bg-success',
-                                            'pending' => 'bg-warning text-dark',
-                                            'rejected' => 'bg-danger',
-                                            'cancelled' => 'bg-secondary',
-                                            default => 'bg-secondary'
-                                        };
-                                    @endphp
-                                    <span class="badge {{ $badgeClass }}" style="pointer-events: none;">{{ $demande['avis_retour']['statut'] ?? '-' }}</span>
+                                    <span class="badge {{ $demande['avis_retour']['badge_class'] ?? 'bg-secondary' }}" style="pointer-events: none;">{{ $demande['avis_retour']['statut'] ?? '-' }}</span>
                                 @else
                                     <span style="color: #6c757d; pointer-events: none;">-</span>
                                 @endif
@@ -964,10 +992,9 @@ function renderDemandes(demandes, total, startIndex, endIndex, currentPage, tota
             // Always show avis retour PDF button if approved (will generate if needed)
             if (demande.avis_retour && demande.avis_retour.statut_raw == 'approved' && demande.avis_retour.id) {
                 pdfButtonsHtml += `
-                    <a href="{{ url('hr/leaves/download-avis-retour-pdf') }}/${demande.avis_retour.id}" 
+                    <a href="{{ url('hr/leaves/avis-retour') }}/${demande.avis_retour.id}/view-pdf" 
                        class="btn btn-sm btn-outline-success" 
-                       target="_blank"
-                       title="Avis de Retour PDF - Sera généré si non existant">
+                       title="Voir Avis de Retour PDF avec Solde">
                         <i class="fas fa-file-pdf me-1"></i> PDF Retour
                     </a>
                 `;

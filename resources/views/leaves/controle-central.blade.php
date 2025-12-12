@@ -63,14 +63,7 @@
                     <label for="month" class="form-label mb-1">Mois</label>
                     <select class="form-select" id="month" name="month" onchange="this.form.submit()">
                         <option value="">Tous les mois</option>
-                        @php
-                            $months = [
-                                1 => 'Janvier', 2 => 'Février', 3 => 'Mars', 4 => 'Avril',
-                                5 => 'Mai', 6 => 'Juin', 7 => 'Juillet', 8 => 'Août',
-                                9 => 'Septembre', 10 => 'Octobre', 11 => 'Novembre', 12 => 'Décembre'
-                            ];
-                        @endphp
-                        @foreach($months as $num => $name)
+                        @foreach($months ?? [] as $num => $name)
                             <option value="{{ $num }}" {{ request('month') == $num ? 'selected' : '' }}>{{ $name }}</option>
                         @endforeach
                     </select>
@@ -129,9 +122,6 @@
                     </thead>
                     <tbody>
                         @forelse($demandes as $item)
-                            @php
-                                $demande = is_array($item) ? (object)$item : $item;
-                            @endphp
                             <tr>
                                 <!-- Données Demande -->
                                 <td class="text-center align-middle" style="padding: 10px;">{{ $loop->iteration }}</td>

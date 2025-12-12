@@ -72,6 +72,16 @@ class AgentController extends Controller
         
         $agents = $query->orderBy('fname')->orderBy('lname')->paginate(15);
         
+        // Prepare active parcours for each agent
+        $agents->getCollection()->transform(function($agent) {
+            $activeParcours = $agent->parcours ? $agent->parcours->filter(function($p) {
+                return is_null($p->date_fin) || $p->date_fin >= now();
+            })->first() : null;
+            
+            $agent->activeParcours = $activeParcours;
+            return $agent;
+        });
+        
         return view('agents.consulter', compact('agents'));
     }
 
@@ -111,6 +121,16 @@ class AgentController extends Controller
         }
         
         $agents = $query->orderBy('fname')->orderBy('lname')->paginate(15);
+        
+        // Prepare active parcours for each agent
+        $agents->getCollection()->transform(function($agent) {
+            $activeParcours = $agent->parcours ? $agent->parcours->filter(function($p) {
+                return is_null($p->date_fin) || $p->date_fin >= now();
+            })->first() : null;
+            
+            $agent->activeParcours = $activeParcours;
+            return $agent;
+        });
         
         return view('agents.gerer-comptes', compact('agents'));
     }

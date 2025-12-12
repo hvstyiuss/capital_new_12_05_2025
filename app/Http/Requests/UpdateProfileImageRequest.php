@@ -20,7 +20,12 @@ class UpdateProfileImageRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'image' => ['required', 'image', 'mimes:jpeg,png,jpg,gif', 'max:2048'],
+            'image' => [
+                'required',
+                'image',
+                'mimes:jpeg,jpg,png',
+                'max:7168', // 7 MB in kilobytes
+            ],
         ];
     }
 
@@ -32,8 +37,8 @@ class UpdateProfileImageRequest extends FormRequest
         return [
             'image.required' => 'Veuillez sélectionner une image.',
             'image.image' => 'Le fichier doit être une image.',
-            'image.mimes' => 'L\'image doit être au format JPG, PNG ou GIF.',
-            'image.max' => 'L\'image ne peut pas dépasser 2MB.',
+            'image.mimes' => 'L\'image doit être au format JPG, JPEG ou PNG.',
+            'image.max' => 'L\'image ne peut pas dépasser 7 Mo.',
         ];
     }
 }

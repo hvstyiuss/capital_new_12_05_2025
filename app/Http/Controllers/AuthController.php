@@ -16,13 +16,36 @@ use App\Actions\Auth\UpdateProfileAction;
 
 class AuthController extends Controller
 {
-    public function showLogin()
+    public function showLogin(Request $request)
     {
         if (Auth::check()) {
             return redirect()->route('dashboard');
         }
 
         $data = app(ShowLoginAction::class)->execute(request()->ip());
+
+        // Filter errors for display (exclude blocked login error and PPR credential error)
+        $filteredErrors = [];
+        if ($request->session()->has('errors')) {
+            $errors = $request->session()->get('errors');
+            $allErrors = $errors->all();
+            
+            // Filter out blocked login error if we're showing the block alert
+            if (isset($data['isBlocked']) && $data['isBlocked']) {
+                $allErrors = array_filter($allErrors, function($error) {
+                    return !str_contains($error, 'Trop de tentatives de connexion échouées');
+                });
+            }
+            
+            // Filter out PPR credential error
+            $allErrors = array_filter($allErrors, function($error) {
+                return !str_contains($error, 'Les identifiants fournis ne correspondent pas à nos enregistrements');
+            });
+            
+            $filteredErrors = array_values($allErrors);
+        }
+        
+        $data['filteredErrors'] = $filteredErrors;
 
         return view('auth.login', $data);
     }
@@ -91,7 +114,11 @@ class AuthController extends Controller
             'name' => 'required|string|max:255',
             'current_password' => 'nullable|string',
             'new_password' => 'nullable|string|min:8|confirmed',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'image' => 'nullable|image|mimes:jpeg,jpg,png|max:7168', // 7 MB in kilobytes
+        ], [
+            'image.image' => 'Le fichier doit être une image.',
+            'image.mimes' => 'L\'image doit être au format JPG, JPEG ou PNG.',
+            'image.max' => 'L\'image ne peut pas dépasser 7 Mo.',
         ]);
 
         // Handle password change preconditions at controller (validation-level rules)

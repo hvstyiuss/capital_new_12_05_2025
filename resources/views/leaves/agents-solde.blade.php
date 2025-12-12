@@ -78,7 +78,7 @@
                                     <td class="px-3 py-3">
                                         <div class="d-flex align-items-center">
                                             @if($agent->userInfo && $agent->userInfo->photo)
-                                                <img src="{{ asset('storage/' . $agent->userInfo->photo) }}" 
+                                                <img src="{{ $agent->userInfo->photo_url }}" 
                                                      alt="{{ $agent->fname }} {{ $agent->lname }}" 
                                                      class="rounded-circle me-2" 
                                                      style="width: 32px; height: 32px; object-fit: cover;">

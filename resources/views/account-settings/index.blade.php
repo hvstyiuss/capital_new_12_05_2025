@@ -95,7 +95,7 @@
                                          id="current_image_preview"
                                          class="w-20 h-20 rounded-xl object-cover border-2 border-purple-300 shadow-md">
                                 @elseif($user->userInfo && $user->userInfo->photo)
-                                    <img src="{{ asset('storage/' . $user->userInfo->photo) }}" 
+                                    <img src="{{ $user->userInfo->photo_url }}" 
                                          alt="Photo actuelle" 
                                          id="current_image_preview"
                                          class="w-20 h-20 rounded-xl object-cover border-2 border-purple-300 shadow-md">

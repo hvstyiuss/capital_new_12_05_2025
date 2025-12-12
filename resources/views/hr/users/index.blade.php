@@ -31,7 +31,7 @@
                     <div class="d-flex align-items-center mb-3">
                         <div class="avatar-lg me-3">
                             @if($user->userInfo && $user->userInfo->photo)
-                                <img src="{{ asset('storage/' . $user->userInfo->photo) }}" alt="Avatar" class="rounded-circle img-fluid">
+                                <img src="{{ $user->userInfo->photo_url }}" alt="Avatar" class="rounded-circle img-fluid">
                             @else
                                 <div class="avatar-lg bg-gradient-primary text-white rounded-circle d-flex align-items-center justify-content-center">
                                     <span class="fs-4 fw-bold">{{ substr($user->name, 0, 2) }}</span>

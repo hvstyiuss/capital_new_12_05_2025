@@ -688,64 +688,33 @@
             
             <div class="login-body">
                 @if (isset($isBlocked) && $isBlocked)
-                    <div class="alert alert-danger" role="alert" id="blockedAlert" style="background: #fef2f2; border-color: #dc2626; color: #dc2626; padding: 1.5rem; border-radius: 0.75rem; margin-bottom: 1.5rem; position: relative;">
-                        <button type="button" onclick="document.getElementById('blockedAlert').style.display='none';" style="position: absolute; top: 0.75rem; right: 0.75rem; background: none; border: none; color: #dc2626; font-size: 1.25rem; cursor: pointer; padding: 0.25rem; line-height: 1; opacity: 0.7; transition: opacity 0.2s;" onmouseover="this.style.opacity='1';" onmouseout="this.style.opacity='0.7';" aria-label="Fermer">
-                            <i class="fas fa-times"></i>
-                        </button>
-                        <div style="display: flex; align-items: center; gap: 0.75rem; padding-right: 2rem;">
-                            <i class="fas fa-ban" style="font-size: 1.5rem;"></i>
-                            <div>
-                                <strong style="display: block; margin-bottom: 0.5rem;">Connexion temporairement bloquée</strong>
-                                <p style="margin: 0; font-size: 0.875rem;">
-                                    Trop de tentatives de connexion échouées. Veuillez réessayer dans 
-                                    <span id="remainingTime" style="font-weight: 700; font-size: 1rem;" data-remaining-seconds="{{ ($remainingMinutes * 60) + $remainingSecs }}">
-                                        @php
-                                            $timeParts = [];
-                                            if ($remainingMinutes > 0) {
-                                                $timeParts[] = $remainingMinutes . ' minute' . ($remainingMinutes > 1 ? 's' : '');
-                                            }
-                                            if ($remainingSecs > 0) {
-                                                $timeParts[] = $remainingSecs . ' seconde' . ($remainingSecs > 1 ? 's' : '');
-                                            }
-                                            if (empty($timeParts)) {
-                                                $timeParts[] = 'quelques secondes';
-                                            }
-                                            echo implode(' et ', $timeParts);
-                                        @endphp
-                                    </span>.
-                                </p>
-                            </div>
-                        </div>
-                    </div>
+                    <x-alert type="error" title="Connexion temporairement bloquée" :dismissible="true">
+                        <p class="mb-0">
+                            Trop de tentatives de connexion échouées. Veuillez réessayer dans 
+                            <span id="remainingTime" 
+                                  class="fw-bold" 
+                                  data-remaining-seconds="{{ ($remainingMinutes * 60) + $remainingSecs }}">
+                                {{ $remainingTimeMessage }}
+                            </span>.
+                        </p>
+                    </x-alert>
                 @endif
                 
-                @if ($errors->any())
-                    @php
-                        // Filter out the blocked login error if we're showing the block alert
-                        // Also filter out the PPR credential error
-                        $filteredErrors = $errors->all();
-                        if (isset($isBlocked) && $isBlocked) {
-                            $filteredErrors = array_filter($filteredErrors, function($error) {
-                                return !str_contains($error, 'Trop de tentatives de connexion échouées');
-                            });
-                        }
-                        // Filter out PPR credential error
-                        $filteredErrors = array_filter($filteredErrors, function($error) {
-                            return !str_contains($error, 'Les identifiants fournis ne correspondent pas à nos enregistrements');
-                        });
-                    @endphp
-                    @if (!empty($filteredErrors))
-                        <x-alert type="error" title="Erreur de connexion!" dismissible="true">
-                            <ul class="mt-2">
-                                @foreach ($filteredErrors as $error)
-                                    <li class="text-sm">{{ $error }}</li>
-                                @endforeach
-                            </ul>
-                        </x-alert>
-                    @endif
+                @if (!empty($filteredErrors ?? []))
+                    <x-alert type="error" title="Erreur de connexion!" dismissible="true">
+                        <ul class="mt-2">
+                            @foreach ($filteredErrors as $error)
+                                <li class="text-sm">{{ $error }}</li>
+                            @endforeach
+                        </ul>
+                    </x-alert>
                 @endif
                 
-                <form method="POST" action="{{ route('login') }}" id="loginForm" class="space-y-6" @if(isset($isBlocked) && $isBlocked) onsubmit="return false;" @endif>
+                <form method="POST" 
+                      action="{{ route('login') }}" 
+                      id="loginForm" 
+                      class="space-y-6" 
+                      @if(isset($isBlocked) && $isBlocked) onsubmit="return false;" @endif>
                     @csrf
                     
                     <!-- Main Form Container with Flex -->
@@ -754,14 +723,13 @@
                         <div class="flex-1 space-y-6">
                             <div class="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-6 border border-blue-200">
                                 <div class="flex items-center gap-3 mb-4">
-                                    
                                     <h3 class="text-lg font-bold text-blue-900">Informations de connexion</h3>
                                 </div>
                                 
                                 <div class="form-group">
                                     <label for="ppr" class="form-label">
                                         PPR
-                                        <span class="text-red-500">*</span>
+                                        <span class="text-red-500" aria-label="requis">*</span>
                                     </label>
                                     <div class="input-wrapper">
                                         <input
@@ -772,10 +740,17 @@
                                             placeholder="Entrez votre PPR"
                                             required
                                             autocomplete="username"
-                                            {{ !(isset($isBlocked) && $isBlocked) ? 'autofocus' : '' }}
-                                            {{ (isset($isBlocked) && $isBlocked) ? 'disabled' : '' }}
-                                            class="form-control"
+                                            @if(!(isset($isBlocked) && $isBlocked)) autofocus @endif
+                                            @if(isset($isBlocked) && $isBlocked) disabled @endif
+                                            class="form-control @error('ppr') is-invalid @enderror"
+                                            aria-describedby="ppr-error"
                                         >
+                                        @error('ppr')
+                                            <div id="ppr-error" class="invalid-feedback" role="alert">
+                                                <i class="fas fa-exclamation-circle me-1" aria-hidden="true"></i>
+                                                {{ $message }}
+                                            </div>
+                                        @enderror
                                     </div>
                                 </div>
                                 
@@ -796,7 +771,6 @@
                             <!-- Security Verification Section -->
                             <div class="bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg p-6 border border-green-200">
                                 <div class="flex items-center gap-3 mb-4">
-                                    
                                     <h3 class="text-lg font-bold text-green-900">Vérification de sécurité</h3>
                                 </div>
                                 <x-form.captcha 
@@ -806,7 +780,6 @@
                                     :disabled="isset($isBlocked) && $isBlocked"
                                 />
                             </div>
-                            
                         </div>
                     </div>
                     
@@ -815,7 +788,8 @@
                         <button type="submit" 
                                 id="loginBtn" 
                                 class="btn-login"
-                                @if(isset($isBlocked) && $isBlocked) disabled @endif>
+                                @disabled(isset($isBlocked) && $isBlocked)
+                                aria-label="Se connecter">
                             <span class="btn-text">Se connecter</span>
                         </button>
                     </div>
@@ -916,20 +890,7 @@
                 // Check if login is blocked
                 @if(isset($isBlocked) && $isBlocked)
                 e.preventDefault();
-                @php
-                    $timeParts = [];
-                    if ($remainingMinutes > 0) {
-                        $timeParts[] = $remainingMinutes . ' minute' . ($remainingMinutes > 1 ? 's' : '');
-                    }
-                    if ($remainingSecs > 0) {
-                        $timeParts[] = $remainingSecs . ' seconde' . ($remainingSecs > 1 ? 's' : '');
-                    }
-                    if (empty($timeParts)) {
-                        $timeParts[] = 'quelques secondes';
-                    }
-                    $timeMsg = implode(' et ', $timeParts);
-                @endphp
-                alert('Trop de tentatives de connexion échouées. Veuillez réessayer dans {{ $timeMsg }}.');
+                alert('Trop de tentatives de connexion échouées. Veuillez réessayer dans {{ $remainingTimeMessage }}.');
                 return false;
                 @endif
                 

@@ -29,19 +29,39 @@ class NotificationController extends Controller
      */
     public function markAsRead(Request $request, $id)
     {
-        $user = Auth::user();
-        $notification = $user->notifications()->findOrFail($id);
-        
-        if ($notification && !$notification->read_at) {
-            $notification->update(['read_at' => now()]);
+        try {
+            $user = Auth::user();
+            $notification = $user->notifications()->find($id);
+            
+            if (!$notification) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Notification introuvable.',
+                ], 404);
+            }
+            
+            if (!$notification->read_at) {
+                $notification->update(['read_at' => now()]);
+            }
+            
+            $unreadCount = $user->notifications()->whereNull('read_at')->count();
+            
+            return response()->json([
+                'success' => true,
+                'unread_count' => $unreadCount,
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error marking notification as read: ' . $e->getMessage(), [
+                'notification_id' => $id,
+                'user_id' => Auth::id(),
+                'exception' => get_class($e),
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur lors du marquage de la notification comme lue.',
+            ], 500);
         }
-        
-        $unreadCount = $user->notifications()->whereNull('read_at')->count();
-        
-        return response()->json([
-            'success' => true,
-            'unread_count' => $unreadCount,
-        ]);
     }
 
     /**
@@ -49,14 +69,26 @@ class NotificationController extends Controller
      */
     public function markAllAsRead(Request $request)
     {
-        $user = Auth::user();
-        $user->notifications()
-            ->whereNull('read_at')
-            ->update(['read_at' => now()]);
-        
-        return response()->json([
-            'success' => true,
-        ]);
+        try {
+            $user = Auth::user();
+            $user->notifications()
+                ->whereNull('read_at')
+                ->update(['read_at' => now()]);
+            
+            return response()->json([
+                'success' => true,
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error marking all notifications as read: ' . $e->getMessage(), [
+                'user_id' => Auth::id(),
+                'exception' => get_class($e),
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur lors du marquage de toutes les notifications comme lues.',
+            ], 500);
+        }
     }
 
     /**
@@ -85,17 +117,37 @@ class NotificationController extends Controller
      */
     public function destroy(Request $request, $id)
     {
-        $user = Auth::user();
-        $notification = $user->notifications()->findOrFail($id);
-        
-        $notification->delete();
-        
-        $unreadCount = $user->notifications()->whereNull('read_at')->count();
-        
-        return response()->json([
-            'success' => true,
-            'unread_count' => $unreadCount,
-        ]);
+        try {
+            $user = Auth::user();
+            $notification = $user->notifications()->find($id);
+            
+            if (!$notification) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Notification introuvable.',
+                ], 404);
+            }
+            
+            $notification->delete();
+            
+            $unreadCount = $user->notifications()->whereNull('read_at')->count();
+            
+            return response()->json([
+                'success' => true,
+                'unread_count' => $unreadCount,
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error deleting notification: ' . $e->getMessage(), [
+                'notification_id' => $id,
+                'user_id' => Auth::id(),
+                'exception' => get_class($e),
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur lors de la suppression de la notification.',
+            ], 500);
+        }
     }
 
     /**
@@ -103,12 +155,24 @@ class NotificationController extends Controller
      */
     public function deleteAll(Request $request)
     {
-        $user = Auth::user();
-        $user->notifications()->delete();
-        
-        return response()->json([
-            'success' => true,
-        ]);
+        try {
+            $user = Auth::user();
+            $user->notifications()->delete();
+            
+            return response()->json([
+                'success' => true,
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error deleting all notifications: ' . $e->getMessage(), [
+                'user_id' => Auth::id(),
+                'exception' => get_class($e),
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur lors de la suppression des notifications.',
+            ], 500);
+        }
     }
 }
 

@@ -29,16 +29,17 @@ class ValidateAvisDepartAction
 
         $avisDepart->update(['statut' => 'approved']);
         
-        // Generate PDF if not already generated
+        // Generate PDF (on-the-fly, not stored)
         if ($demandeUser && $generatePdfCallback) {
-            if (Schema::hasColumn('avis_departs', 'pdf_path')) {
-                if (!$avisDepart->pdf_path) {
-                    $pdfPath = $generatePdfCallback($avisDepart, $demandeUser);
-                    $avisDepart->update(['pdf_path' => $pdfPath]);
-                }
-            } else {
-                // Column doesn't exist, generate PDF but don't save path
+            try {
+                // Generate PDF but don't save path (PDFs are generated on-the-fly)
                 $generatePdfCallback($avisDepart, $demandeUser);
+            } catch (\Exception $e) {
+                // Log error but don't fail validation
+                \Log::error('Error generating avis depart PDF during validation: ' . $e->getMessage(), [
+                    'avis_depart_id' => $avisDepart->id,
+                    'exception' => get_class($e),
+                ]);
             }
         }
 

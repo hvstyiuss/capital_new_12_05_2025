@@ -9,21 +9,6 @@
         <p class="text-muted mb-2">Gérez vos informations personnelles et paramètres de compte</p>
     </div>
 
-    <!-- Alert Messages -->
-    @if(session('success'))
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
-            <i class="fas fa-check-circle me-2"></i>{{ session('success') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-    @endif
-
-    @if(session('error'))
-        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-            <i class="fas fa-exclamation-triangle me-2"></i>{{ session('error') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-    @endif
-
     <!-- Profile Summary Card -->
     <div class="card border-0 shadow-sm mb-4">
         <div class="card-body">
@@ -34,15 +19,20 @@
                             <img src="{{ asset('storage/' . $user->image) }}" 
                                  alt="{{ $user->name }}" 
                                  class="rounded-circle me-3" 
-                                 style="width: 60px; height: 60px; object-fit: cover;">
-                        @elseif($user->userInfo && $user->userInfo->photo)
-                            <img src="{{ asset('storage/' . $user->userInfo->photo) }}" 
+                                 width="60"
+                                 height="60"
+                                 style="object-fit: cover;">
+                        @elseif($user->userInfo?->photo)
+                            <img src="{{ $user->userInfo->photo_url }}" 
                                  alt="{{ $user->name }}" 
                                  class="rounded-circle me-3" 
-                                 style="width: 60px; height: 60px; object-fit: cover;">
+                                 width="60"
+                                 height="60"
+                                 style="object-fit: cover;">
                         @else
                             <div class="rounded-circle bg-primary bg-opacity-10 d-flex align-items-center justify-content-center me-3" 
-                                 style="width: 60px; height: 60px;">
+                                 style="width: 60px; height: 60px;"
+                                 aria-label="Initiale de {{ $user->name }}">
                                 <span class="text-primary fw-bold" style="font-size: 1.5rem;">
                                     {{ strtoupper(substr($user->name ?? 'U', 0, 1)) }}
                                 </span>
@@ -121,34 +111,49 @@
                                          alt="Photo actuelle" 
                                          id="current_image_preview"
                                          class="rounded-circle" 
-                                         style="width: 60px; height: 60px; object-fit: cover;">
-                                @elseif($user->userInfo && $user->userInfo->photo)
-                                    <img src="{{ asset('storage/' . $user->userInfo->photo) }}" 
+                                         width="60"
+                                         height="60"
+                                         style="object-fit: cover;">
+                                @elseif($user->userInfo?->photo)
+                                    <img src="{{ $user->userInfo->photo_url }}" 
                                          alt="Photo actuelle" 
                                          id="current_image_preview"
                                          class="rounded-circle" 
-                                         style="width: 60px; height: 60px; object-fit: cover;">
+                                         width="60"
+                                         height="60"
+                                         style="object-fit: cover;">
                                 @else
                                     <div class="rounded-circle bg-primary bg-opacity-10 d-flex align-items-center justify-content-center" 
                                          id="current_image_preview"
-                                         style="width: 60px; height: 60px;">
+                                         style="width: 60px; height: 60px;"
+                                         aria-label="Initiale de {{ $user->name }}">
                                         <span class="text-primary fw-bold" style="font-size: 1.5rem;">
                                             {{ strtoupper(substr($user->name ?? 'U', 0, 1)) }}
                                         </span>
                                     </div>
                                 @endif
-                                <img src="" alt="Aperçu" id="image_preview" class="rounded-circle d-none" style="width: 60px; height: 60px; object-fit: cover;">
+                                <img src="" 
+                                     alt="Aperçu" 
+                                     id="image_preview" 
+                                     class="rounded-circle d-none" 
+                                     width="60"
+                                     height="60"
+                                     style="object-fit: cover;">
                             </div>
                             <div class="flex-grow-1">
                                 <input type="file" 
                                        class="form-control @error('image') is-invalid @enderror" 
                                        id="image" 
                                        name="image" 
-                                       accept="image/jpeg,image/png,image/jpg,image/gif"
-                                       onchange="previewImage(this)">
-                                <small class="text-muted">Formats acceptés: JPG, PNG, GIF. Taille max: 2MB</small>
+                                       accept="image/jpeg,image/png,image/jpg"
+                                       onchange="previewImage(this)"
+                                       aria-describedby="image-help image-error">
+                                <small id="image-help" class="text-muted">Formats acceptés: JPG, JPEG, PNG. Taille max: 7 Mo</small>
                                 @error('image')
-                                    <div class="invalid-feedback d-block">{{ $message }}</div>
+                                    <div id="image-error" class="invalid-feedback d-block" role="alert">
+                                        <i class="fas fa-exclamation-circle me-1" aria-hidden="true"></i>
+                                        {{ $message }}
+                                    </div>
                                 @enderror
                             </div>
                         </div>

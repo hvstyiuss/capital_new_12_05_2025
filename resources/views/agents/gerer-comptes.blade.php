@@ -100,17 +100,8 @@
                                 </td>
                                 <td>{{ $agent->email ?? '-' }}</td>
                                 <td>
-                                    @if($agent->parcours && $agent->parcours->count() > 0)
-                                        @php
-                                            $activeParcours = $agent->parcours->filter(function($p) {
-                                                return is_null($p->date_fin) || $p->date_fin >= now();
-                                            })->first();
-                                        @endphp
-                                        @if($activeParcours && $activeParcours->entite)
-                                            {{ $activeParcours->entite->name }}
-                                        @else
-                                            <span class="text-muted">-</span>
-                                        @endif
+                                    @if($agent->activeParcours && $agent->activeParcours->entite)
+                                        {{ $agent->activeParcours->entite->name }}
                                     @else
                                         <span class="text-muted">-</span>
                                     @endif

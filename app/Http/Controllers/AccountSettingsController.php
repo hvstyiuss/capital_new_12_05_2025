@@ -77,19 +77,32 @@ class AccountSettingsController extends Controller
      */
     public function updateProfileImage(UpdateProfileImageRequest $request)
     {
-        $user = Auth::user();
-        $imagePath = $this->accountSettingsService->updateProfileImage($user, $request->file('image'));
+        try {
+            $user = Auth::user();
+            $imagePath = $this->accountSettingsService->updateProfileImage($user, $request->file('image'));
 
-        if ($request->expectsJson() || $request->wantsJson()) {
-            return response()->json([
-                'success' => true,
-                'message' => 'Photo de profil mise à jour avec succès.',
-                'image_url' => asset('storage/' . $imagePath),
-            ]);
+            if ($request->expectsJson() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Photo de profil mise à jour avec succès.',
+                    'image_url' => asset('storage/' . $imagePath),
+                ]);
+            }
+
+            return redirect()->route('account-settings.index')
+                ->with('success', 'Photo de profil mise à jour avec succès.');
+        } catch (\Exception $e) {
+            if ($request->expectsJson() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $e->getMessage(),
+                ], 422);
+            }
+
+            return redirect()->back()
+                ->withErrors(['image' => $e->getMessage()])
+                ->withInput();
         }
-
-        return redirect()->route('account-settings.index')
-            ->with('success', 'Photo de profil mise à jour avec succès.');
     }
 
     /**

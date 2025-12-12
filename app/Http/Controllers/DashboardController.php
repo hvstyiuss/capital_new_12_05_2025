@@ -329,10 +329,15 @@ class DashboardController extends Controller
             foreach ($recentAvisRetours as $demande) {
                 $avisRetour = $demande->avis->avisRetour ?? null;
                 if ($avisRetour) {
+                    $avisDepart = $demande->avis->avisDepart ?? null;
                     $recentAvisRetourDeclarations[] = [
                         'demande' => $demande,
                         'avis_retour' => $avisRetour,
                         'is_recent' => $avisRetour->created_at->isToday(),
+                        'collaborateur_name' => $demande->user ? ($demande->user->fname . ' ' . $demande->user->lname) : 'N/A',
+                        'date_retour_declaree' => $avisRetour->date_retour_declaree ? $avisRetour->date_retour_declaree->format('d/m/Y') : 'N/A',
+                        'nbr_jours_consumes' => $avisRetour->nbr_jours_consumes ?? 0,
+                        'date_depart' => $avisDepart && $avisDepart->date_depart ? $avisDepart->date_depart->format('d/m/Y') : 'N/A',
                     ];
                 }
             }
@@ -399,10 +404,23 @@ class DashboardController extends Controller
             $approvalDate = $mutation->approved_by_current_direction_at ?? 
                            $mutation->approved_by_destination_direction_at;
             if ($approvalDate) {
+                // Get approver name
+                $approverName = null;
+                if ($mutation->approvedBySuperCollaborateurRh) {
+                    $approverName = $mutation->approvedBySuperCollaborateurRh->fname . ' ' . $mutation->approvedBySuperCollaborateurRh->lname;
+                } elseif ($mutation->approvedByCurrentDirection) {
+                    $approverName = $mutation->approvedByCurrentDirection->fname . ' ' . $mutation->approvedByCurrentDirection->lname;
+                } elseif ($mutation->approvedByDestinationDirection) {
+                    $approverName = $mutation->approvedByDestinationDirection->fname . ' ' . $mutation->approvedByDestinationDirection->lname;
+                }
+                
                 $recentMutationChanges[] = [
                     'mutation' => $mutation,
                     'status' => 'approved',
                     'is_recent' => $approvalDate->isToday() || $approvalDate->isYesterday(),
+                    'to_entite_name' => $mutation->toEntite ? $mutation->toEntite->name : 'N/A',
+                    'date_depot' => $mutation->created_at ? $mutation->created_at->format('d/m/Y') : 'N/A',
+                    'approver_name' => $approverName,
                 ];
             }
         }
@@ -413,10 +431,23 @@ class DashboardController extends Controller
                             $mutation->rejected_by_destination_direction_at ??
                             $mutation->rejected_by_super_rh_at;
             if ($rejectionDate) {
+                // Get rejector name
+                $rejectorName = null;
+                if ($mutation->rejectedBySuperRh) {
+                    $rejectorName = $mutation->rejectedBySuperRh->fname . ' ' . $mutation->rejectedBySuperRh->lname;
+                } elseif ($mutation->rejectedByCurrentDirection) {
+                    $rejectorName = $mutation->rejectedByCurrentDirection->fname . ' ' . $mutation->rejectedByCurrentDirection->lname;
+                } elseif ($mutation->rejectedByDestinationDirection) {
+                    $rejectorName = $mutation->rejectedByDestinationDirection->fname . ' ' . $mutation->rejectedByDestinationDirection->lname;
+                }
+                
                 $recentMutationChanges[] = [
                     'mutation' => $mutation,
                     'status' => 'rejected',
                     'is_recent' => $rejectionDate->isToday() || $rejectionDate->isYesterday(),
+                    'to_entite_name' => $mutation->toEntite ? $mutation->toEntite->name : 'N/A',
+                    'date_depot' => $mutation->created_at ? $mutation->created_at->format('d/m/Y') : 'N/A',
+                    'rejector_name' => $rejectorName,
                 ];
             }
         }
@@ -465,13 +496,112 @@ class DashboardController extends Controller
             ->get();
             
             foreach ($pendingSuperRhMutations as $mutation) {
-                $pendingSuperCollaborateurRhMutations[] = $mutation;
+                // Determine the stage
+                $isIntermediateReview = false;
+                $isFinalValidation = false;
+                if ($mutation->mutation_type === 'externe') {
+                    if ($mutation->approved_by_current_direction && 
+                        !$mutation->sent_to_destination_by_super_rh &&
+                        !$mutation->approved_by_destination_direction) {
+                        $isIntermediateReview = true;
+                    } elseif ($mutation->approved_by_current_direction &&
+                              $mutation->sent_to_destination_by_super_rh &&
+                              $mutation->approved_by_destination_direction) {
+                        $isFinalValidation = true;
+                    }
+                } else {
+                    $isFinalValidation = true;
+                }
+                
+                $pendingSuperCollaborateurRhMutations[] = [
+                    'mutation' => $mutation,
+                    'to_entite_name' => $mutation->toEntite ? $mutation->toEntite->name : 'N/A',
+                    'date_depot' => $mutation->created_at ? $mutation->created_at->format('d/m/Y') : 'N/A',
+                    'user_name' => $mutation->user ? ($mutation->user->fname . ' ' . $mutation->user->lname) : 'N/A',
+                    'is_intermediate_review' => $isIntermediateReview,
+                    'is_final_validation' => $isFinalValidation,
+                ];
             }
         }
             
+        // Prepare additional data for the view
+        $currentEntite = $currentParcours ? $currentParcours->entite : null;
+        $corpsDescriptions = [
+            'forestier' => 'Personnel diplômé de l\'école forestière, habilité, ou pouvant être habilité, au port d\'armes, spécialisé dans la gestion des forêts.',
+            'support' => 'Personnel administratif, financier, RH ou technique, assurant un appui stratégique ou opérationnel aux services forestiers.'
+        ];
+        
+        // Determine direction name and whether to show it
+        $directionName = null;
+        $shouldShowDirection = false;
+        if ($userDirection) {
+            $directionName = $userDirection->name;
+        } elseif ($currentEntite && $currentEntite->lieu_direction) {
+            $directionName = $currentEntite->lieu_direction;
+        }
+        
+        if ($directionName && $directionName !== 'Non définie') {
+            $directionNameUpper = strtoupper($directionName);
+            
+            // Check if it's a regional direction
+            $isRegionalDirection = (
+                strpos($directionNameUpper, 'DIRECTIONS REGIONALES') !== false ||
+                strpos($directionNameUpper, 'DIRECTION REGIONALE') !== false
+            );
+            
+            // Check if it's central administration (should not show)
+            $isCentralAdmin = (
+                strpos($directionNameUpper, 'DIRECTEUR GÉNÉRAL') !== false ||
+                strpos($directionNameUpper, 'DIRECTEUR GENERAL') !== false ||
+                strpos($directionNameUpper, 'SECRÉTAIRE GÉNÉRAL') !== false ||
+                strpos($directionNameUpper, 'SECRETAIRE GENERAL') !== false
+            );
+            
+            // Only show if it's a regional direction and not central admin
+            if ($isRegionalDirection && !$isCentralAdmin) {
+                $shouldShowDirection = true;
+            }
+        }
+        
+        // Determine ville d'affectation
+        $villeAffectation = 'Non définie';
+        if ($currentEntite) {
+            $current = $currentEntite;
+            $maxDepth = 10;
+            $depth = 0;
+            
+            while ($current && $depth < $maxDepth) {
+                // Check if this entity has lieu_affectation
+                if ($current->lieu_affectation) {
+                    $villeAffectation = $current->lieu_affectation;
+                    break;
+                }
+                
+                // Move to parent
+                if ($current->parent_id) {
+                    if (!$current->relationLoaded('parent')) {
+                        $current->load('parent');
+                    }
+                    if ($current->parent) {
+                        $current = $current->parent;
+                    } else {
+                        break;
+                    }
+                } else {
+                    break;
+                }
+                $depth++;
+            }
+            
+            // If still not found, try to get lieu_direction from the direction entity
+            if ($villeAffectation === 'Non définie' && $userDirection && $userDirection->lieu_direction) {
+                $villeAffectation = $userDirection->lieu_direction;
+            }
+        }
+        
         // Regular user dashboard - show their personal info
         $mutationService = $this->mutationService;
-        return view('hr.dashboard', compact('user', 'isChef', 'pendingDemandesForChef', 'pendingDemandesCount', 'pendingMutationsForChef', 'pendingMutationsCount', 'needsReturnDeclaration', 'returnDeclarationDemande', 'recentStatusChanges', 'recentMutationChanges', 'recentAvisRetourDeclarations', 'chefName', 'chefPpr', 'chefEntiteName', 'currentParcours', 'pendingSuperCollaborateurRhMutations', 'userDirection', 'mutationService'));
+        return view('hr.dashboard', compact('user', 'isChef', 'pendingDemandesForChef', 'pendingDemandesCount', 'pendingMutationsForChef', 'pendingMutationsCount', 'needsReturnDeclaration', 'returnDeclarationDemande', 'recentStatusChanges', 'recentMutationChanges', 'recentAvisRetourDeclarations', 'chefName', 'chefPpr', 'chefEntiteName', 'currentParcours', 'pendingSuperCollaborateurRhMutations', 'userDirection', 'mutationService', 'currentEntite', 'corpsDescriptions', 'directionName', 'shouldShowDirection', 'villeAffectation'));
     }
 
     public function getStatistics()
@@ -656,6 +786,14 @@ class DashboardController extends Controller
         
         // Append other query parameters
         $topEntites->appends(request()->except('entities_page'));
+        
+        // Prepare entity numbers for display (for pagination)
+        $topEntites->getCollection()->transform(function($entite, $index) use ($topEntites) {
+            $entite->entityNumber = $topEntites->firstItem() 
+                ? $topEntites->firstItem() + $index 
+                : $index + 1;
+            return $entite;
+        });
 
         // Recent activities (last 10)
         $recentActivities = collect();
@@ -696,6 +834,9 @@ class DashboardController extends Controller
             ->sortByDesc('date')
             ->take(10);
 
+        // Calculate approval rate
+        $approvalRate = $totalMutations > 0 ? round(($approvedMutations / $totalMutations) * 100, 1) : 0;
+
         $stats = [
             'total_users' => $totalUsers,
             'active_users' => $activeUsers,
@@ -709,6 +850,7 @@ class DashboardController extends Controller
             'total_mutations' => $totalMutations,
             'pending_mutations' => $pendingMutations,
             'approved_mutations' => $approvedMutations,
+            'approval_rate' => $approvalRate,
             'total_entites' => $totalEntites,
             'entites_with_chefs' => $entitesWithChefs,
             'entites_without_chefs' => $entitesWithoutChefs,

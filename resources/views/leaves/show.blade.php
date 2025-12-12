@@ -22,32 +22,6 @@
         </div>
     </div>
 
-    @php
-        $avis = $demande->avis;
-        $avisDepart = $avis ? $avis->avisDepart : null;
-        $avisRetour = $avis ? $avis->avisRetour : null;
-        
-        $statutMap = [
-            'pending' => 'En attente',
-            'approved' => 'Validé',
-            'rejected' => 'Rejeté',
-            'cancelled' => 'Annulé',
-        ];
-        
-        $statutColors = [
-            'pending' => 'warning',
-            'approved' => 'success',
-            'rejected' => 'danger',
-            'cancelled' => 'secondary',
-        ];
-        
-        $statutIcons = [
-            'pending' => 'fa-clock',
-            'approved' => 'fa-check-circle',
-            'rejected' => 'fa-times-circle',
-            'cancelled' => 'fa-ban',
-        ];
-    @endphp
 
     <div class="row g-4">
         <!-- Informations de la Demande -->
@@ -174,12 +148,12 @@
                                 <p class="text-muted small mb-0">{{ $avisDepart->created_at->format('H:i') }}</p>
                             </div>
                         </div>
-                        @if($avisDepart->pdf_path)
+                        @if($avisDepart->statut == 'approved')
                         <div class="col-12">
-                            <div class="d-flex align-items-center gap-2">
-                                <a href="{{ route('hr.leaves.download-avis-depart-pdf', $avisDepart->id) }}" 
+                            <div class="d-flex align-items-center gap-2 flex-wrap">
+                                <a href="{{ route('hr.leaves.view-avis-depart-pdf', $avisDepart->id) }}" 
                                    class="btn btn-outline-danger" 
-                                   target="_blank">
+                                   title="Voir l'Avis de Départ PDF - Sera généré automatiquement">
                                     <i class="fas fa-file-pdf me-2"></i>
                                     Télécharger l'Avis de Départ (PDF)
                                 </a>
@@ -293,30 +267,18 @@
                                 <p class="text-muted small mb-0">{{ $avisRetour->created_at->format('H:i') }}</p>
                             </div>
                         </div>
-                        @php
-                            $hasPdfPath = isset($avisRetour->pdf_path) && $avisRetour->pdf_path && $avisRetour->pdf_path !== '';
-                            $hasExplanationPdf = isset($avisRetour->explanation_pdf_path) && $avisRetour->explanation_pdf_path && $avisRetour->explanation_pdf_path !== '';
-                            
-                            // Check if explanation is needed (actual return date > declared return date)
-                            $needsExplanation = false;
-                            if ($avisRetour->date_retour_declaree && $avisRetour->date_retour_effectif) {
-                                $dateRetourDeclaree = \Carbon\Carbon::parse($avisRetour->date_retour_declaree);
-                                $dateRetourEffectif = \Carbon\Carbon::parse($avisRetour->date_retour_effectif);
-                                $needsExplanation = $dateRetourEffectif->greaterThan($dateRetourDeclaree);
-                            }
-                        @endphp
                         @if($avisRetour->statut == 'approved')
                             <div class="col-12">
                                 <div class="d-flex align-items-center gap-2 flex-wrap">
                                     @if($hasPdfPath)
-                                    <a href="{{ route('hr.leaves.download-avis-retour-pdf', $avisRetour->id) }}" 
+                                    <a href="{{ route('hr.leaves.view-avis-retour-pdf', $avisRetour->id) }}" 
                                        class="btn btn-outline-success" 
                                        target="_blank">
                                         <i class="fas fa-file-pdf me-2"></i>
                                         Télécharger l'Avis de Retour (PDF)
                                     </a>
                                     @else
-                                    <a href="{{ route('hr.leaves.download-avis-retour-pdf', $avisRetour->id) }}" 
+                                    <a href="{{ route('hr.leaves.view-avis-retour-pdf', $avisRetour->id) }}" 
                                        class="btn btn-outline-success" 
                                        target="_blank"
                                        title="Le PDF sera généré automatiquement lors du téléchargement">

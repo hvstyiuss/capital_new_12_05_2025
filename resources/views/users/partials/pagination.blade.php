@@ -23,42 +23,12 @@
             @endif
 
             {{-- Pagination Elements --}}
-            @php
-                $currentPage = $users->currentPage();
-                $lastPage = $users->lastPage();
-                $pages = [];
-                
-                // Always show first page
-                if ($currentPage > 4) {
-                    $pages[] = ['page' => 1, 'url' => $users->appends(request()->query())->url(1)];
-                    if ($currentPage > 5) {
-                        $pages[] = ['page' => '...', 'disabled' => true];
-                    }
-                }
-                
-                // Show pages around current page
-                $start = max(1, $currentPage - 2);
-                $end = min($lastPage, $currentPage + 2);
-                
-                for ($i = $start; $i <= $end; $i++) {
-                    $pages[] = ['page' => $i, 'url' => $users->appends(request()->query())->url($i)];
-                }
-                
-                // Always show last page
-                if ($currentPage < $lastPage - 3) {
-                    if ($currentPage < $lastPage - 4) {
-                        $pages[] = ['page' => '...', 'disabled' => true];
-                    }
-                    $pages[] = ['page' => $lastPage, 'url' => $users->appends(request()->query())->url($lastPage)];
-                }
-            @endphp
-            
-            @foreach ($pages as $pageInfo)
+            @foreach (($paginationData ?? []) as $pageInfo)
                 @if (isset($pageInfo['disabled']))
                     <li class="page-item disabled">
                         <span class="page-link">...</span>
                     </li>
-                @elseif ($pageInfo['page'] == $currentPage)
+                @elseif ($pageInfo['page'] == $users->currentPage())
                     <li class="page-item active">
                         <span class="page-link">{{ $pageInfo['page'] }}</span>
                     </li>

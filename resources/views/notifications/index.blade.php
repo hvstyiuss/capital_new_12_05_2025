@@ -89,9 +89,17 @@ function markAsRead(notificationId) {
         headers: {
             'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
             'Content-Type': 'application/json',
+            'Accept': 'application/json',
         },
     })
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(data => {
+                throw new Error(data.message || 'Erreur lors du marquage de la notification comme lue.');
+            });
+        }
+        return response.json();
+    })
     .then(data => {
         if (data.success) {
             const notificationItem = document.querySelector(`[data-notification-id="${notificationId}"]`);
@@ -102,10 +110,13 @@ function markAsRead(notificationId) {
                     markAsReadBtn.remove();
                 }
             }
+        } else {
+            alert(data.message || 'Erreur lors du marquage de la notification comme lue.');
         }
     })
     .catch(error => {
         console.error('Error:', error);
+        alert(error.message || 'Erreur lors du marquage de la notification comme lue.');
     });
 }
 
@@ -115,16 +126,27 @@ function markAllAsRead() {
         headers: {
             'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
             'Content-Type': 'application/json',
+            'Accept': 'application/json',
         },
     })
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(data => {
+                throw new Error(data.message || 'Erreur lors du marquage de toutes les notifications comme lues.');
+            });
+        }
+        return response.json();
+    })
     .then(data => {
         if (data.success) {
             location.reload();
+        } else {
+            alert(data.message || 'Erreur lors du marquage de toutes les notifications comme lues.');
         }
     })
     .catch(error => {
         console.error('Error:', error);
+        alert(error.message || 'Erreur lors du marquage de toutes les notifications comme lues.');
     });
 }
 
@@ -138,9 +160,17 @@ function deleteNotification(notificationId) {
         headers: {
             'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
             'Content-Type': 'application/json',
+            'Accept': 'application/json',
         },
     })
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(data => {
+                throw new Error(data.message || 'Erreur lors de la suppression de la notification.');
+            });
+        }
+        return response.json();
+    })
     .then(data => {
         if (data.success) {
             const notificationItem = document.querySelector(`[data-notification-id="${notificationId}"]`);
@@ -159,12 +189,12 @@ function deleteNotification(notificationId) {
                 }, 300);
             }
         } else {
-            alert('Erreur lors de la suppression de la notification.');
+            alert(data.message || 'Erreur lors de la suppression de la notification.');
         }
     })
     .catch(error => {
         console.error('Error:', error);
-        alert('Erreur lors de la suppression de la notification.');
+        alert(error.message || 'Erreur lors de la suppression de la notification.');
     });
 }
 
@@ -178,19 +208,27 @@ function deleteAllNotifications() {
         headers: {
             'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
             'Content-Type': 'application/json',
+            'Accept': 'application/json',
         },
     })
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(data => {
+                throw new Error(data.message || 'Erreur lors de la suppression des notifications.');
+            });
+        }
+        return response.json();
+    })
     .then(data => {
         if (data.success) {
             location.reload();
         } else {
-            alert('Erreur lors de la suppression des notifications.');
+            alert(data.message || 'Erreur lors de la suppression des notifications.');
         }
     })
     .catch(error => {
         console.error('Error:', error);
-        alert('Erreur lors de la suppression des notifications.');
+        alert(error.message || 'Erreur lors de la suppression des notifications.');
     });
 }
 </script>

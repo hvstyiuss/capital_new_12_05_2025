@@ -7,15 +7,14 @@ use App\Models\AvisRetour;
 use App\Models\User;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\Schema;
-use Illuminate\Support\Facades\Storage;
-use Dompdf\Options;
+use SimpleSoftwareIO\QrCode\Facades\QrCode;
 
 class LeavePDFService
 {
     /**
-     * Generate PDF for avis de départ
+     * Generate PDF for avis de départ (returns PDF object, does not save)
      */
-    public function generateAvisDepartPDF(AvisDepart $avisDepart, User $user): string
+    public function generateAvisDepartPDF(AvisDepart $avisDepart, User $user)
     {
         try {
             // Ensure user has necessary relationships loaded
@@ -42,46 +41,43 @@ class LeavePDFService
             // Generate verification URL if verification code exists
             $verificationUrl = null;
             if (Schema::hasColumn('avis_departs', 'verification_code') && $avisDepart->verification_code) {
-                $verificationUrl = url('/verification/resultat1.php?code_verification=' . $avisDepart->verification_code);
+                $verificationUrl = url('/verification/avis/' . $avisDepart->verification_code);
             }
-            // Setting Options to force Arabic font
-            $options = new Options();
-            $options->set('isRemoteEnabled', true);
-            $options->set('defaultFont', 'amiri');
             
-            // Generate PDF from blade template
-            $pdf = Pdf::setOptions($options)->loadView('leaves.avis-depart-pdf', [
+            // Prepare user data for PDF
+            $userData = $this->prepareUserDataForPDF($user);
+            
+            // Prepare QR code data
+            $qrCodeData = $this->prepareQRCodeData($verificationUrl);
+            
+            // Prepare formatted dates
+            $dateDepartFormatted = $avisDepart->date_depart 
+                ? \Carbon\Carbon::parse($avisDepart->date_depart)->format('d-m-Y') 
+                : '';
+            $dateRetourFormatted = $avisDepart->date_retour 
+                ? \Carbon\Carbon::parse($avisDepart->date_retour)->format('d-m-Y') 
+                : '';
+            
+            // Generate PDF using DomPDF
+            $pdf = Pdf::loadView('leaves.avis-depart-pdf', [
                 'avisDepart' => $avisDepart,
                 'user' => $user,
                 'demande' => $demande,
                 'verificationUrl' => $verificationUrl,
+                'currentParcours' => $userData['currentParcours'],
+                'gradeName' => $userData['gradeName'],
+                'serviceName' => $userData['serviceName'],
+                'parentEntityName' => $userData['parentEntityName'],
+                'logoData' => $userData['logoData'],
+                'qrCodeData' => $qrCodeData,
+                'dateDepartFormatted' => $dateDepartFormatted,
+                'dateRetourFormatted' => $dateRetourFormatted,
             ]);
 
             // Set paper size and orientation
             $pdf->setPaper('A4', 'portrait');
 
-            // Generate filename
-            $filename = 'avis-depart-' . $avisDepart->id . '-' . time() . '.pdf';
-            $path = 'pdfs/avis-depart/' . $filename;
-
-            // Ensure directory exists
-            Storage::disk('public')->makeDirectory('pdfs/avis-depart');
-
-            // Generate PDF output
-            $pdfOutput = $pdf->output();
-            
-            if (empty($pdfOutput)) {
-                throw new \Exception('La génération du PDF a retourné un contenu vide.');
-            }
-
-            // Save PDF to storage
-            // $saved = Storage::disk('public')->put($path, $pdfOutput);
-            
-            if (!$saved) {
-                throw new \Exception('Impossible d\'enregistrer le PDF dans le stockage.');
-            }
-
-            return $path;
+            return $pdf;
         } catch (\Exception $e) {
             \Log::error('Error in generateAvisDepartPDF: ' . $e->getMessage(), [
                 'avis_depart_id' => $avisDepart->id,
@@ -94,9 +90,9 @@ class LeavePDFService
     }
 
     /**
-     * Generate PDF for avis de retour
+     * Generate PDF for avis de retour (returns PDF object, does not save)
      */
-    public function generateAvisRetourPDF(AvisRetour $avisRetour, User $user, ?AvisDepart $avisDepart = null): string
+    public function generateAvisRetourPDF(AvisRetour $avisRetour, User $user, ?AvisDepart $avisDepart = null)
     {
         try {
             // Ensure user has necessary relationships loaded
@@ -128,47 +124,48 @@ class LeavePDFService
             // Generate verification URL if verification code exists
             $verificationUrl = null;
             if (Schema::hasColumn('avis_retours', 'verification_code') && $avisRetour->verification_code) {
-                $verificationUrl = url('/verification/resultat1.php?code_verification=' . $avisRetour->verification_code);
+                $verificationUrl = url('/verification/avis/' . $avisRetour->verification_code);
             }
-            // Setting Options to force Arabic font
-            $options = new Options();
-            $options->set('isRemoteEnabled', true);
-            $options->set('defaultFont', 'amiri');
             
-            // Generate PDF from blade template
-            $pdf = Pdf::setOptions($options)->loadView('leaves.avis-retour-pdf', [
+            // Prepare user data for PDF
+            $userData = $this->prepareUserDataForPDF($user);
+            
+            // Prepare QR code data
+            $qrCodeData = $this->prepareQRCodeData($verificationUrl);
+            
+            // Prepare formatted dates
+            $dateDepartFormatted = $avisDepart && $avisDepart->date_depart 
+                ? \Carbon\Carbon::parse($avisDepart->date_depart)->format('d-m-Y') 
+                : '';
+            $dateRetourDeclareeFormatted = $avisRetour->date_retour_declaree 
+                ? \Carbon\Carbon::parse($avisRetour->date_retour_declaree)->format('d-m-Y') 
+                : '';
+            $dateRetourEffectifFormatted = $avisRetour->date_retour_effectif 
+                ? \Carbon\Carbon::parse($avisRetour->date_retour_effectif)->format('d-m-Y') 
+                : '';
+            
+            // Generate PDF using DomPDF
+            $pdf = Pdf::loadView('leaves.avis-retour-pdf', [
                 'avisRetour' => $avisRetour,
                 'user' => $user,
                 'avisDepart' => $avisDepart,
                 'demande' => $demande,
                 'verificationUrl' => $verificationUrl,
+                'currentParcours' => $userData['currentParcours'],
+                'gradeName' => $userData['gradeName'],
+                'serviceName' => $userData['serviceName'],
+                'parentEntityName' => $userData['parentEntityName'],
+                'logoData' => $userData['logoData'],
+                'qrCodeData' => $qrCodeData,
+                'dateDepartFormatted' => $dateDepartFormatted,
+                'dateRetourDeclareeFormatted' => $dateRetourDeclareeFormatted,
+                'dateRetourEffectifFormatted' => $dateRetourEffectifFormatted,
             ]);
 
             // Set paper size and orientation
             $pdf->setPaper('A4', 'portrait');
 
-            // Generate filename
-            $filename = 'avis-retour-' . $avisRetour->id . '-' . time() . '.pdf';
-            $path = 'pdfs/avis-retour/' . $filename;
-
-            // Ensure directory exists
-            Storage::disk('public')->makeDirectory('pdfs/avis-retour');
-
-            // Generate PDF output
-            $pdfOutput = $pdf->output();
-            
-            if (empty($pdfOutput)) {
-                throw new \Exception('La génération du PDF a retourné un contenu vide.');
-            }
-
-            // Save PDF to storage
-            // $saved = Storage::disk('public')->put($path, $pdfOutput);
-            
-            if (!$saved) {
-                throw new \Exception('Impossible d\'enregistrer le PDF dans le stockage.');
-            }
-
-            return $path;
+            return $pdf;
         } catch (\Exception $e) {
             \Log::error('Error in generateAvisRetourPDF: ' . $e->getMessage(), [
                 'avis_retour_id' => $avisRetour->id,
@@ -212,9 +209,9 @@ class LeavePDFService
     }
 
     /**
-     * Generate explanation PDF for avis de retour
+     * Generate explanation PDF for avis de retour (returns PDF object, does not save)
      */
-    public function generateExplanationPDF(AvisRetour $avisRetour, User $user, ?AvisDepart $avisDepart = null): string
+    public function generateExplanationPDF(AvisRetour $avisRetour, User $user, ?AvisDepart $avisDepart = null)
     {
         // Get demande from avis
         $avis = $avisRetour->avis;
@@ -224,33 +221,154 @@ class LeavePDFService
         if (!$avisDepart && $avis) {
             $avisDepart = $avis->avisDepart;
         }
-        // Setting Options to force Arabic font
-            $options = new Options();
-            $options->set('isRemoteEnabled', true);
-            $options->set('defaultFont', 'amiri');
-                        
-        // Generate PDF from blade template
-        $pdf = Pdf::setOptions($options)->loadView('leaves.explanation-pdf', [
+        
+        // Calculate explanation data
+        $explanationData = $this->calculateExplanationData($avisRetour, $avisDepart);
+        
+        // Calculate deadline (48 hours from now)
+        $deadline = \Carbon\Carbon::now()->addHours(48);
+        
+        // Generate PDF using DomPDF
+        $pdf = Pdf::loadView('leaves.explanation-pdf', [
             'avisRetour' => $avisRetour,
             'user' => $user,
             'avisDepart' => $avisDepart,
             'demande' => $demande,
+            'deadline' => $deadline,
+            'explanationData' => $explanationData,
         ]);
 
         // Set paper size and orientation
         $pdf->setPaper('A4', 'portrait');
 
-        // Generate filename
-        $filename = 'explication-retard-' . $avisRetour->id . '-' . time() . '.pdf';
-        $path = 'pdfs/explanations/' . $filename;
+        return $pdf;
+    }
 
-        // Ensure directory exists
-        Storage::disk('public')->makeDirectory('pdfs/explanations');
+    /**
+     * Calculate explanation data for PDF
+     */
+    private function calculateExplanationData(AvisRetour $avisRetour, ?AvisDepart $avisDepart): array
+    {
+        if (!$avisDepart || !$avisRetour->date_retour_declaree) {
+            return [
+                'isLateReturn' => false,
+                'isConsumptionExceeded' => false,
+                'expectedDays' => 0,
+                'dateRetourPrevue' => null,
+                'dateRetourDeclaree' => null,
+                'dateDepart' => null,
+            ];
+        }
+        
+        $dateRetourPrevue = \Carbon\Carbon::parse($avisDepart->date_retour);
+        $dateRetourDeclaree = \Carbon\Carbon::parse($avisRetour->date_retour_declaree);
+        $dateDepart = \Carbon\Carbon::parse($avisDepart->date_depart);
+        
+        // Calculate expected days from departure to declared return date
+        $current = $dateDepart->copy();
+        $expectedDays = 0;
+        $holidays = \App\Models\JoursFerie::whereBetween('date', [$dateDepart, $dateRetourDeclaree])
+            ->pluck('date')
+            ->map(function($date) {
+                return $date->format('Y-m-d');
+            })
+            ->toArray();
+        
+        while ($current->lte($dateRetourDeclaree)) {
+            $dateString = $current->format('Y-m-d');
+            if (!$current->isWeekend() && !in_array($dateString, $holidays)) {
+                $expectedDays++;
+            }
+            $current->addDay();
+        }
+        
+        $isLateReturn = $dateRetourDeclaree->gt($dateRetourPrevue);
+        $isConsumptionExceeded = $avisRetour->nbr_jours_consumes > $expectedDays;
+        
+        return [
+            'isLateReturn' => $isLateReturn,
+            'isConsumptionExceeded' => $isConsumptionExceeded,
+            'expectedDays' => $expectedDays,
+            'dateRetourPrevue' => $dateRetourPrevue,
+            'dateRetourDeclaree' => $dateRetourDeclaree,
+            'dateDepart' => $dateDepart,
+        ];
+    }
 
-        // Save PDF to storage
-        // Storage::disk('public')->put($path, $pdf->output());
+    /**
+     * Prepare user data for PDF generation
+     */
+    private function prepareUserDataForPDF(User $user): array
+    {
+        // Get current parcours
+        $currentParcours = \App\Models\Parcours::where('ppr', $user->ppr)
+            ->where(function($query) {
+                $query->whereNull('date_fin')
+                      ->orWhere('date_fin', '>=', now());
+            })
+            ->with(['entite.parent', 'grade'])
+            ->orderBy('date_debut', 'desc')
+            ->first();
+        
+        // Get grade name
+        $gradeName = $user->userInfo && $user->userInfo->grade 
+            ? strtoupper($user->userInfo->grade->name) 
+            : ($currentParcours && $currentParcours->grade 
+                ? strtoupper($currentParcours->grade->name) 
+                : '');
+        
+        // Get service name
+        $serviceName = $currentParcours && $currentParcours->entite 
+            ? $currentParcours->entite->name 
+            : '';
+        
+        // Get parent entity name (direction)
+        $parentEntityName = 'Direction du Capital Humain et de la Logistique'; // Default fallback
+        if ($currentParcours && $currentParcours->entite && $currentParcours->entite->parent) {
+            $parentEntityName = $currentParcours->entite->parent->name;
+        }
+        
+        // Get logo data
+        $logoData = '';
+        try {
+            if (extension_loaded('gd')) {
+                $logoPath = public_path('images/anef.png');
+                if (file_exists($logoPath)) {
+                    $logoData = 'data:image/png;base64,' . base64_encode(file_get_contents($logoPath));
+                }
+            }
+        } catch (\Exception $e) {
+            $logoData = '';
+        }
+        
+        return [
+            'currentParcours' => $currentParcours,
+            'gradeName' => $gradeName,
+            'serviceName' => $serviceName,
+            'parentEntityName' => $parentEntityName,
+            'logoData' => $logoData,
+        ];
+    }
 
-        return $path;
+    /**
+     * Prepare QR code data for PDF generation
+     */
+    private function prepareQRCodeData(?string $verificationUrl): ?string
+    {
+        if (!$verificationUrl) {
+            return null;
+        }
+        
+        try {
+            if (extension_loaded('gd')) {
+                $qrSvg = QrCode::size(70)->format('svg')->generate($verificationUrl);
+                return 'data:image/svg+xml;base64,' . base64_encode($qrSvg);
+            }
+        } catch (\Exception $e) {
+            \Log::warning('Error generating QR code: ' . $e->getMessage());
+        }
+        
+        return null;
     }
 }
 

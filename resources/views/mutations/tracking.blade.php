@@ -123,9 +123,9 @@
                     <div class="col-md-3">
                         <label for="year" class="form-label small text-muted">Année</label>
                         <select class="form-select" id="year" name="year">
-                            @for($y = date('Y'); $y >= date('Y') - 5; $y--)
+                            @foreach($availableYears ?? [] as $y)
                                 <option value="{{ $y }}" {{ $year == $y ? 'selected' : '' }}>{{ $y }}</option>
-                            @endfor
+                            @endforeach
                         </select>
                     </div>
                     <div class="col-md-3">
@@ -196,8 +196,8 @@
                                 </td>
                                 <td class="text-center">
                                     <div>
-                                        <div class="fw-semibold">{{ \Carbon\Carbon::parse($mutation['date_depot'])->format('d/m/Y') }}</div>
-                                        <small class="text-muted">{{ \Carbon\Carbon::parse($mutation['date_depot'])->format('H:i') }}</small>
+                                        <div class="fw-semibold">{{ $mutation['date_depot_formatted'] ?? '-' }}</div>
+                                        <small class="text-muted">{{ $mutation['date_depot_time_formatted'] ?? '' }}</small>
                                     </div>
                                 </td>
                                 <td class="text-center">
@@ -214,45 +214,12 @@
                                     @endif
                                 </td>
                                 <td class="text-center">
-                                    @php
-                                        $statutLower = strtolower($mutation['statut']);
-                                    @endphp
-                                    @if($statutLower == 'rejeté' || $statutLower == 'rejected')
-                                        <span class="badge bg-danger">
-                                            <i class="fas fa-times-circle me-1"></i>{{ $mutation['statut'] }}
-                                        </span>
-                                    @elseif($statutLower == 'validé' || $statutLower == 'approved')
-                                        <span class="badge bg-success">
-                                            <i class="fas fa-check-circle me-1"></i>{{ $mutation['statut'] }}
-                                        </span>
-                                    @elseif($statutLower == 'en attente validation rh')
-                                        <span class="badge bg-warning text-dark">
-                                            <i class="fas fa-user-tie me-1"></i>{{ $mutation['statut'] }}
-                                        </span>
-                                    @elseif($statutLower == 'en attente' || $statutLower == 'pending')
-                                        <span class="badge bg-warning text-dark">
-                                            <i class="fas fa-clock me-1"></i>{{ $mutation['statut'] }}
-                                        </span>
-                                    @elseif($statutLower == 'en cours de traitement')
-                                        <span class="badge bg-info">
-                                            <i class="fas fa-spinner me-1"></i>{{ $mutation['statut'] }}
-                                        </span>
-                                    @else
-                                        <span class="badge bg-secondary">{{ $mutation['statut'] }}</span>
-                                    @endif
+                                    <span class="badge {{ $mutation['badge_class'] ?? 'bg-secondary' }}">
+                                        <i class="fas {{ $mutation['icon_class'] ?? 'fa-info-circle' }} me-1"></i>{{ $mutation['statut'] }}
+                                    </span>
                                 </td>
                                 <td class="text-center">
-                                    @php
-                                        // Check if current entity/direction has approved
-                                        $isCurrentEntityValidated = false;
-                                        if (isset($mutation['approved_by_current_direction'])) {
-                                            $isCurrentEntityValidated = $mutation['approved_by_current_direction'];
-                                        } elseif (isset($mutation['is_validated_ent'])) {
-                                            // Fallback to old field for backward compatibility
-                                            $isCurrentEntityValidated = $mutation['is_validated_ent'];
-                                        }
-                                    @endphp
-                                    @if($isCurrentEntityValidated)
+                                    @if($mutation['is_current_entity_validated'] ?? false)
                                         <span class="badge bg-success">
                                             <i class="fas fa-check me-1"></i>Oui
                                         </span>
@@ -263,26 +230,11 @@
                                     @endif
                                 </td>
                                 <td class="text-center">
-                                    @php
-                                        // For external mutations: check if destination direction has approved
-                                        // For internal mutations: N/A (doesn't apply)
-                                        // For old mutations: use valide_reception field
-                                        $isDestinationEntityValidated = false;
-                                        if ($mutation['mutation_type'] === 'externe') {
-                                            $isDestinationEntityValidated = $mutation['approved_by_destination_direction'] ?? false;
-                                        } elseif ($mutation['mutation_type'] === 'interne') {
-                                            // Internal mutations don't have destination entity validation
-                                            $isDestinationEntityValidated = null;
-                                        } else {
-                                            // Old mutations: use valide_reception field
-                                            $isDestinationEntityValidated = $mutation['valide_reception'] ?? false;
-                                        }
-                                    @endphp
-                                    @if($isDestinationEntityValidated === null)
+                                    @if(($mutation['is_destination_entity_validated'] ?? false) === null)
                                         <span class="badge bg-secondary">
                                             <i class="fas fa-minus me-1"></i>N/A
                                         </span>
-                                    @elseif($isDestinationEntityValidated)
+                                    @elseif($mutation['is_destination_entity_validated'] ?? false)
                                         <span class="badge bg-success">
                                             <i class="fas fa-check me-1"></i>Oui
                                         </span>
@@ -355,27 +307,14 @@
                                     </div>
                                 </td>
                                 <td class="text-center">
-                                    @if($mutation['date_debut_affectation'])
-                                        <div class="fw-semibold">{{ \Carbon\Carbon::parse($mutation['date_debut_affectation'])->format('d/m/Y') }}</div>
+                                    @if($mutation['date_debut_affectation_formatted'])
+                                        <div class="fw-semibold">{{ $mutation['date_debut_affectation_formatted'] }}</div>
                                     @else
                                         <span class="text-muted">-</span>
                                     @endif
                                 </td>
                                 <td class="text-center">
-                                    @php
-                                        $canDelete = false;
-                                        $statutLower = strtolower($mutation['statut']);
-                                        // Can delete if status is "En attente" (pending) and not approved or rejected
-                                        if ($statutLower == 'en attente' || $statutLower == 'pending') {
-                                            if (!$mutation['approved_by_current_direction'] && 
-                                                !$mutation['approved_by_destination_direction'] &&
-                                                !$mutation['rejected_by_current_direction'] &&
-                                                !$mutation['rejected_by_destination_direction']) {
-                                                $canDelete = true;
-                                            }
-                                        }
-                                    @endphp
-                                    @if($canDelete)
+                                    @if($mutation['can_delete'] ?? false)
                                         <form action="{{ route('mutations.destroy', $mutation['id']) }}" method="POST" class="d-inline mutation-delete-form" data-skip-loading="true">
                                             @csrf
                                             @method('DELETE')

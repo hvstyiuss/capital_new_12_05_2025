@@ -69,18 +69,11 @@
                                 required>
                                 <option value="">Sélectionnez une entité</option>
                                 @foreach($entites as $entite)
-                                    @php
-                                        $displayName = $entite->name;
-                                        if ($entite->entity_type) {
-                                            $displayName .= ' (' . ucfirst($entite->entity_type) . ')';
-                                        }
-                                        $fullText = strtolower($displayName);
-                                    @endphp
                                     <option value="{{ $entite->id }}" 
-                                            data-name="{{ $fullText }}"
+                                            data-name="{{ $entite->full_text ?? strtolower($entite->display_name ?? $entite->name) }}"
                                             data-has-chef="{{ $entite->chef_ppr ? '1' : '0' }}"
                                             {{ old('to_entite_id') == $entite->id ? 'selected' : '' }}>
-                                        {{ $displayName }}
+                                        {{ $entite->display_name ?? $entite->name }}
                                     </option>
                                 @endforeach
                             </select>
@@ -119,13 +112,10 @@
                                     name="role_in_entity" 
                                     required>
                                 <option value="">Sélectionnez un rôle</option>
-                                @php
-                                    $isCurrentChef = $currentParcours && $currentParcours->entite && $currentParcours->entite->chef_ppr === $user->ppr;
-                                @endphp
-                                <option value="collaborateur" {{ old('role_in_entity', $currentParcours && !$isCurrentChef ? 'collaborateur' : '') == 'collaborateur' ? 'selected' : '' }}>
+                                <option value="collaborateur" {{ old('role_in_entity', $defaultRole ?? 'collaborateur') == 'collaborateur' ? 'selected' : '' }}>
                                     Collaborateur
                                 </option>
-                                <option value="chef" {{ old('role_in_entity', $currentParcours && $isCurrentChef ? 'chef' : '') == 'chef' ? 'selected' : '' }}>
+                                <option value="chef" {{ old('role_in_entity', $defaultRole ?? 'collaborateur') == 'chef' ? 'selected' : '' }}>
                                     Chef
                                 </option>
                             </select>

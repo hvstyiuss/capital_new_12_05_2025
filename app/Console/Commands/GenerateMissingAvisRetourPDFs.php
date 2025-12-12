@@ -38,12 +38,9 @@ class GenerateMissingAvisRetourPDFs extends Command
             return 1;
         }
 
-        // Get all approved avis de retour without PDF
+        // Get all approved avis de retour
+        // Note: PDFs are now generated on-the-fly, so we check for approved status only
         $avisRetours = AvisRetour::where('statut', 'approved')
-            ->where(function($query) {
-                $query->whereNull('pdf_path')
-                      ->orWhere('pdf_path', '');
-            })
             ->with(['avis.demande.user', 'avis.avisDepart'])
             ->get();
 
@@ -69,11 +66,15 @@ class GenerateMissingAvisRetourPDFs extends Command
 
                 $avisDepart = $avisRetour->avis->avisDepart ?? null;
 
-                // Generate PDF using service
-                $pdfPath = $pdfService->generateAvisRetourPDF($avisRetour, $demande->user, $avisDepart);
-
-                // Update avis retour with PDF path
-                $avisRetour->update(['pdf_path' => $pdfPath]);
+                // Generate PDF using service (on-the-fly, no storage)
+                $pdf = $pdfService->generateAvisRetourPDF($avisRetour, $demande->user, $avisDepart);
+                
+                // PDF is generated on-the-fly, no need to store path
+                // If pdf_path column exists and is needed, we can mark it as generated
+                if (Schema::hasColumn('avis_retours', 'pdf_path')) {
+                    // Mark as generated without storing actual path
+                    $avisRetour->update(['pdf_path' => 'generated']);
+                }
                 $generated++;
 
                 $this->info("PDF généré pour l'avis de retour #{$avisRetour->id} (PPR: {$demande->user->ppr})");

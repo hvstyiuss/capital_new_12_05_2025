@@ -29,6 +29,7 @@ Route::get('/health/detailed', [HealthController::class, 'detailed'])->name('hea
 
 // Public Leave Verification Route (no auth required)
 Route::get('/verification/resultat1.php', [LeaveController::class, 'verifyLeave'])->name('leaves.verify');
+Route::get('/verification/avis/{code}', [LeaveController::class, 'verifyLeave'])->name('leaves.verify.avis');
 Route::get('/verification/{code}', [LeaveController::class, 'verifyLeave'])->name('leaves.verify.code');
 
 // Authentication Routes

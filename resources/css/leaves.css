@@ -1,0 +1,31 @@
+/* Border colors for status */
+.border-left-pending {
+    border-left-color: #ffc107 !important;
+}
+
+.border-left-approved {
+    border-left-color: #28a745 !important;
+}
+
+.border-left-rejected {
+    border-left-color: #dc3545 !important;
+}
+
+.border-left-cancelled {
+    border-left-color: #6c757d !important;
+}
+
+/* Icon colors */
+.text-avis-depart {
+    color: rgb(99, 163, 114);
+}
+
+.text-avis-retour {
+    color: rgb(238, 181, 135);
+}
+
+/* Border left utility */
+.border-left-4 {
+    border-left-width: 4px !important;
+}
+

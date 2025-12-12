@@ -17,6 +17,41 @@ use Carbon\Carbon;
 
 class HRUserController extends Controller
 {
+    /**
+     * Prepare pagination data for view
+     */
+    private function preparePaginationData($paginator): array
+    {
+        $currentPage = $paginator->currentPage();
+        $lastPage = $paginator->lastPage();
+        $pages = [];
+        
+        // Always show first page
+        if ($currentPage > 4) {
+            $pages[] = ['page' => 1, 'url' => $paginator->appends(request()->query())->url(1)];
+            if ($currentPage > 5) {
+                $pages[] = ['page' => '...', 'disabled' => true];
+            }
+        }
+        
+        // Show pages around current page
+        $start = max(1, $currentPage - 2);
+        $end = min($lastPage, $currentPage + 2);
+        
+        for ($i = $start; $i <= $end; $i++) {
+            $pages[] = ['page' => $i, 'url' => $paginator->appends(request()->query())->url($i)];
+        }
+        
+        // Always show last page
+        if ($currentPage < $lastPage - 3) {
+            if ($currentPage < $lastPage - 4) {
+                $pages[] = ['page' => '...', 'disabled' => true];
+            }
+            $pages[] = ['page' => $lastPage, 'url' => $paginator->appends(request()->query())->url($lastPage)];
+        }
+        
+        return $pages;
+    }
     public function index(Request $request)
     {
         $query = User::with(['roles', 'userInfo']);
@@ -83,10 +118,19 @@ class HRUserController extends Controller
             ->where('created_at', '>=', now()->subDays(30))
             ->count();
         
+        // Prepare users data for table view
+        $users->getCollection()->transform(function($user) {
+            $user->email_for_display = $user->email ?? $user->userprimary->email ?? null;
+            return $user;
+        });
+        
+        // Prepare pagination data
+        $paginationData = $this->preparePaginationData($users);
+        
         // If AJAX request, return JSON
         if ($request->ajax() || $request->has('ajax')) {
             $tableHtml = view('users.partials.table', compact('users'))->render();
-            $paginationHtml = $users->hasPages() ? view('users.partials.pagination', compact('users'))->render() : '';
+            $paginationHtml = $users->hasPages() ? view('users.partials.pagination', compact('users', 'paginationData'))->render() : '';
             return response()->json([
                 'html' => $tableHtml,
                 'pagination' => $paginationHtml,
@@ -99,7 +143,8 @@ class HRUserController extends Controller
             'entites',
             'totalUsers',
             'activeUsers',
-            'newUsers30d'
+            'newUsers30d',
+            'paginationData'
         ));
     }
 
@@ -133,7 +178,11 @@ class HRUserController extends Controller
         }
         
         $user->load(['roles', 'userInfo.grade', 'entites']);
-        return view('users.show', compact('user'));
+        
+        // Calculate total permissions count
+        $totalPermissions = $user->getAllPermissions()->count();
+        
+        return view('users.show', compact('user', 'totalPermissions'));
     }
 
     public function edit(User $user)
@@ -315,8 +364,23 @@ class HRUserController extends Controller
         })->mapWithKeys(function($entite) {
             return [$entite->id => $entite->chef_ppr];
         })->toArray();
+        
+        // Prepare entities with display names and full text for search
+        $entites = $entites->map(function($entite) {
+            $displayName = $entite->name;
+            if ($entite->entity_type) {
+                $displayName .= ' (' . ucfirst($entite->entity_type) . ')';
+            }
+            $entite->display_name = $displayName;
+            $entite->full_text = strtolower($displayName);
+            return $entite;
+        });
+        
+        // Calculate if current user is chef
+        $isCurrentChef = $currentParcours && $currentParcours->entite && $currentParcours->entite->chef_ppr === $user->ppr;
+        $defaultRole = $currentParcours && !$isCurrentChef ? 'collaborateur' : ($isCurrentChef ? 'chef' : 'collaborateur');
 
-        return view('users.transfer', compact('user', 'currentParcours', 'entites', 'entitiesWithChefs'));
+        return view('users.transfer', compact('user', 'currentParcours', 'entites', 'entitiesWithChefs', 'isCurrentChef', 'defaultRole'));
     }
 
     /**

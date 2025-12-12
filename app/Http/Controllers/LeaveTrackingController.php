@@ -7,10 +7,12 @@ use App\Models\User;
 use App\Models\Demande;
 use App\Models\Parcours;
 use App\Models\Entite;
+use App\Services\StatusHelperService;
 use Carbon\Carbon;
 
 class LeaveTrackingController extends Controller
 {
+
     /**
      * Display the leave request tracking page.
      */
@@ -40,6 +42,7 @@ class LeaveTrackingController extends Controller
         
         // Transform all demandes for frontend
         $allDemandesData = $allDemandes->map(function($demande) use ($user) {
+            $statutMap = StatusHelperService::getStatutMap();
             $avis = $demande->avis;
             $avisDepart = $avis ? $avis->avisDepart : null;
             $avisRetour = $avis ? $avis->avisRetour : null;
@@ -72,13 +75,13 @@ class LeaveTrackingController extends Controller
                 $nbrJours = $workingDays;
             }
             
-            $statutMap = [
-                'pending' => 'En attente',
-                'approved' => 'Validé',
-                'rejected' => 'Rejeté',
-                'cancelled' => 'Annulé',
-            ];
             $statut = $avisDepart ? ($statutMap[$avisDepart->statut] ?? $avisDepart->statut) : 'En attente';
+            
+            // Prepare CSS classes
+            $borderClass = StatusHelperService::getBorderClass($statut);
+            $avisDepartBadgeClass = $avisDepart ? StatusHelperService::getBadgeClass($avisDepart->statut) : 'bg-secondary';
+            $avisRetourBadgeClass = $avisRetour ? StatusHelperService::getBadgeClass($avisRetour->statut) : 'bg-secondary';
+            $avisDepartStatutLabel = $avisDepart ? ($statutMap[$avisDepart->statut] ?? $avisDepart->statut) : null;
             
             return [
                 'id' => $demande->id,
@@ -90,6 +93,7 @@ class LeaveTrackingController extends Controller
                 'date_depart' => $avisDepart ? ($avisDepart->date_depart ? Carbon::parse($avisDepart->date_depart)->toISOString() : null) : null,
                 'date_retour' => $avisDepart ? ($avisDepart->date_retour ? Carbon::parse($avisDepart->date_retour)->toISOString() : null) : null,
                 'statut' => $statut,
+                'border_class' => $borderClass,
                 'is_own' => $demande->ppr === $user->ppr,
                 'avis_depart' => $avisDepart ? [
                     'date_depot' => $avisDepart->created_at ? $avisDepart->created_at->toISOString() : null,
@@ -97,12 +101,15 @@ class LeaveTrackingController extends Controller
                     'date_retour_declaree' => $avisRetour ? ($avisRetour->date_retour_declaree ? Carbon::parse($avisRetour->date_retour_declaree)->toISOString() : null) : null,
                     'date_retour_effectif' => $avisRetour ? ($avisRetour->date_retour_effectif ? Carbon::parse($avisRetour->date_retour_effectif)->toISOString() : null) : null,
                     'statut' => $avisDepart->statut,
+                    'statut_label' => $avisDepartStatutLabel,
+                    'badge_class' => $avisDepartBadgeClass,
                     'id' => $avisDepart->id,
                     'pdf_path' => $avisDepart->pdf_path ?? null,
                 ] : null,
                 'avis_retour' => $avisRetour ? [
                     'statut' => $statutMap[$avisRetour->statut] ?? $avisRetour->statut,
                     'statut_raw' => $avisRetour->statut,
+                    'badge_class' => $avisRetourBadgeClass,
                     'id' => $avisRetour->id,
                     'date_depot' => $avisRetour->created_at ? $avisRetour->created_at->toISOString() : null,
                     'nbr_jours_consommes' => $avisRetour->nbr_jours_consumes,
@@ -167,13 +174,14 @@ class LeaveTrackingController extends Controller
             }
             
             // Map statut to French (use avis de départ statut)
-            $statutMap = [
-                'pending' => 'En attente',
-                'approved' => 'Validé',
-                'rejected' => 'Rejeté',
-                'cancelled' => 'Annulé',
-            ];
+            $statutMap = StatusHelperService::getStatutMap();
             $statut = $avisDepart ? ($statutMap[$avisDepart->statut] ?? $avisDepart->statut) : 'En attente';
+            
+            // Prepare CSS classes
+            $borderClass = StatusHelperService::getBorderClass($statut);
+            $avisDepartBadgeClass = $avisDepart ? StatusHelperService::getBadgeClass($avisDepart->statut) : 'bg-secondary';
+            $avisRetourBadgeClass = $avisRetour ? StatusHelperService::getBadgeClass($avisRetour->statut) : 'bg-secondary';
+            $avisDepartStatutLabel = $avisDepart ? ($statutMap[$avisDepart->statut] ?? $avisDepart->statut) : null;
             
             return [
                 'id' => $demande->id,
@@ -185,6 +193,7 @@ class LeaveTrackingController extends Controller
                 'date_depart' => $avisDepart ? $avisDepart->date_depart : null,
                 'date_retour' => $avisDepart ? $avisDepart->date_retour : null,
                 'statut' => $statut,
+                'border_class' => $borderClass,
                 'is_own' => $demande->ppr === $user->ppr,
                 'avis_depart' => $avisDepart ? [
                     'date_depot' => $avisDepart->created_at,
@@ -192,12 +201,15 @@ class LeaveTrackingController extends Controller
                     'date_retour_declaree' => $avisRetour ? $avisRetour->date_retour_declaree : null,
                     'date_retour_effectif' => $avisRetour ? $avisRetour->date_retour_effectif : null,
                     'statut' => $avisDepart->statut,
+                    'statut_label' => $avisDepartStatutLabel,
+                    'badge_class' => $avisDepartBadgeClass,
                     'id' => $avisDepart->id,
                     'pdf_path' => $avisDepart->pdf_path ?? null,
                 ] : null,
                 'avis_retour' => $avisRetour ? [
                     'statut' => $statutMap[$avisRetour->statut] ?? $avisRetour->statut,
                     'statut_raw' => $avisRetour->statut,
+                    'badge_class' => $avisRetourBadgeClass,
                     'id' => $avisRetour->id,
                     'date_depot' => $avisRetour->created_at,
                     'nbr_jours_consommes' => $avisRetour->nbr_jours_consumes,
@@ -218,6 +230,28 @@ class LeaveTrackingController extends Controller
             ['path' => $request->url(), 'query' => $request->query()]
         );
         
+        // Get leave statistics for the user
+        $leaveStats = [
+            'total' => Demande::where('ppr', $user->ppr)
+                ->whereHas('avis.avisDepart')
+                ->count(),
+            'pending' => Demande::where('ppr', $user->ppr)
+                ->whereHas('avis.avisDepart', function($query) {
+                    $query->where('statut', 'pending');
+                })
+                ->count(),
+            'approved' => Demande::where('ppr', $user->ppr)
+                ->whereHas('avis.avisDepart', function($query) {
+                    $query->where('statut', 'approved');
+                })
+                ->count(),
+            'rejected' => Demande::where('ppr', $user->ppr)
+                ->whereHas('avis.avisDepart', function($query) {
+                    $query->where('statut', 'rejected');
+                })
+                ->count(),
+        ];
+
         return view('leaves.tracking', [
             'items' => $items,
             'year' => $year,
@@ -228,6 +262,7 @@ class LeaveTrackingController extends Controller
             'total' => $items->total(),
             'isChef' => $isChef || $user->hasRole('admin'),
             'allDemandesData' => $allDemandesData,
+            'leaveStats' => $leaveStats,
         ]);
     }
 }

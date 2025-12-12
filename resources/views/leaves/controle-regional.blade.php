@@ -46,14 +46,7 @@
                     <label for="month" class="form-label mb-1">Mois</label>
                     <select class="form-select" id="month" name="month" onchange="this.form.submit()">
                         <option value="">Tous les mois</option>
-                        @php
-                            $months = [
-                                1 => 'Janvier', 2 => 'Février', 3 => 'Mars', 4 => 'Avril',
-                                5 => 'Mai', 6 => 'Juin', 7 => 'Juillet', 8 => 'Août',
-                                9 => 'Septembre', 10 => 'Octobre', 11 => 'Novembre', 12 => 'Décembre'
-                            ];
-                        @endphp
-                        @foreach($months as $num => $name)
+                        @foreach($months ?? [] as $num => $name)
                             <option value="{{ $num }}" {{ request('month') == $num ? 'selected' : '' }}>{{ $name }}</option>
                         @endforeach
                     </select>
@@ -103,12 +96,8 @@
                     </thead>
                     <tbody>
                         @forelse($demandes as $item)
-                            @php
-                                $demande = is_array($item) ? (object)$item : $item;
-                                $demandeId = is_array($item) ? $item['id'] : $item->id;
-                            @endphp
                             <tr>
-                                <td>{{ $demandeId }}</td>
+                                <td>{{ is_array($item) ? $item['id'] : $item->id }}</td>
                                 <td>
                                     <a href="{{ route('hr.leaves.user-info', is_array($item) ? $item['ppr'] : $item->ppr) }}" 
                                        class="text-decoration-none" 
@@ -125,17 +114,11 @@
                                 </td>
                                 <td>
                                     @php
-                                        $statut = is_array($item) ? $item['statut'] : $item->statut;
+                                        $statut = is_array($item) ? ($item['statut'] ?? 'pending') : ($item->statut ?? 'pending');
+                                        $badgeClass = \App\Services\StatusHelperService::getBadgeClass($statut);
+                                        $statutLabel = is_array($item) ? ($item['statut_label'] ?? $statut) : ($item->statut_label ?? $statut);
                                     @endphp
-                                    @if($statut == 'pending')
-                                        <span class="badge bg-warning">En attente</span>
-                                    @elseif($statut == 'approved')
-                                        <span class="badge bg-success">Validé</span>
-                                    @elseif($statut == 'rejected')
-                                        <span class="badge bg-danger">Rejeté</span>
-                                    @else
-                                        <span class="badge bg-secondary">{{ is_array($item) ? $item['statut_label'] : $statut }}</span>
-                                    @endif
+                                    <span class="badge {{ $badgeClass }}">{{ $statutLabel }}</span>
                                 </td>
                             </tr>
                         @empty

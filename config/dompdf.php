@@ -179,7 +179,7 @@ return [
          *
          * @var string
          */
-        'default_font' => 'serif',
+        'default_font' => 'dejavu sans',
 
         /**
          * Image DPI setting
@@ -267,7 +267,7 @@ return [
          *
          * @var bool
          */
-        'enable_remote' => false,
+        'enable_remote' => true,
 
         /**
          * List of allowed remote hosts
@@ -298,10 +298,6 @@ return [
         'enable_html5_parser' => true,
     ],
 
-    'fonts' => [
-    'amiri' => [
-        'normal' => public_path('fonts/Amiri-Regular.ttf'),
-    ]
-]
+    'fonts' => []
 
 ];

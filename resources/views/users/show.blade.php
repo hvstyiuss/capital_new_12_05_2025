@@ -252,7 +252,7 @@
                                     </label>
                                     <p class="h6 mb-0">
                                         @if($user->userInfo->photo)
-                                            <a href="{{ asset('storage/' . $user->userInfo->photo) }}" target="_blank" class="text-decoration-none">
+                                            <a href="{{ $user->userInfo->photo_url }}" target="_blank" class="text-decoration-none">
                                                 <i class="fas fa-file-image me-1"></i>Voir la photo
                                             </a>
                                         @else
@@ -466,10 +466,7 @@
                     <div class="mb-3">
                         <label class="form-label text-muted">Permissions totales</label>
                         <p class="h6 mb-0">
-                            @php
-                                $totalPermissions = $user->getAllPermissions()->count();
-                            @endphp
-                            <span class="badge bg-success">{{ $totalPermissions }}</span>
+                            <span class="badge bg-success">{{ $totalPermissions ?? 0 }}</span>
                         </p>
                     </div>
                     

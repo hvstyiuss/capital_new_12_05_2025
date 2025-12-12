@@ -37,7 +37,7 @@
                     <div class="p-6">
                         <div class="text-center mb-6">
                             @if($user->userInfo && $user->userInfo->photo)
-                                <img src="{{ asset('storage/' . $user->userInfo->photo) }}" 
+                                <img src="{{ $user->userInfo->photo_url }}" 
                                      alt="{{ $user->fname }} {{ $user->lname }}" 
                                      class="w-32 h-32 rounded-full mx-auto mb-4 object-cover border-4 border-blue-100 shadow-lg">
                             @else
